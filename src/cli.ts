@@ -15,11 +15,12 @@ import { renderHTML } from './renderers/html';
 import { renderReact } from './renderers/react';
 import { renderMarkdown } from './renderers/markdown';
 import { renderSlideDeck } from './renderers/slide';
+import { renderDocument } from './renderers/document';
 
 interface CLIOptions {
   input?: string;
   output?: string;
-  render?: 'html' | 'react' | 'markdown' | 'slide' | 'json';
+  render?: 'html' | 'react' | 'markdown' | 'slide' | 'document' | 'json';
   provider?: 'anthropic' | 'openai';
   model?: string;
 }
@@ -260,6 +261,8 @@ async function main() {
     output = renderMarkdown(result.ir);
   } else if (opts.render === 'slide') {
     output = renderSlideDeck(result.ir);
+  } else if (opts.render === 'document') {
+    output = renderDocument(result.ir);
   } else {
     output = JSON.stringify(result.ir, null, 2);
   }
