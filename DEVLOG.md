@@ -109,3 +109,22 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 - Web (3 sections) + Slide (4 slides) + Document (4 chapters)
 - 三份输出共享一致的品牌信息和设计系统
 
+---
+
+## 2026-06-12 — v0.0.5 (MCP Server: Agent Infrastructure)
+
+### MCP Server
+- `src/mcp-server.ts` — STDIO MCP server exposing 5 tools
+- `compile_intent` — NL → IR (any domain)
+- `render_format` — IR → HTML/React/MD/Slide/Document
+- `diff_ir` — Compare two IR files
+- `translate_ir` — zh-CN/en-US/ru-RU translation
+- `list_templates` — Built-in templates list
+- Verified: stdio handshake + tools/list response
+- `.mcp.json` auto-generated for Claude Code integration
+
+### Architecture
+- Any MCP agent (Claude Code, Cursor, Copilot) can call intent-compiler
+- IR preprocessing before code generation → eliminates NL ambiguity
+- STDIO transport → auto-started by agent, zero config
+

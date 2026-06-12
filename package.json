@@ -1,11 +1,12 @@
 {
   "name": "intent-compiler",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "Natural Language → Structured Intent IR → Any Output. The LLVM for vibe coding.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "intentc": "./dist/cli.js"
+    "intentc": "./dist/cli.js",
+    "intentc-mcp": "./dist/mcp-server.js"
   },
   "scripts": {
     "build": "tsc",
@@ -32,6 +33,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.17.0",
     "commander": "^12.0.0"
   },
