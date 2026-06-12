@@ -231,7 +231,7 @@ export async function compile(
     if (opts.lockFields && opts.lockFields.length > 0 && opts.existingIR) {
       const ir = parsed as IntentIR;
       for (const field of opts.lockFields) {
-        (ir as Record<string, unknown>)[field] = (opts.existingIR as Record<string, unknown>)[field];
+        (ir as unknown as Record<string, unknown>)[field] = (opts.existingIR as unknown as Record<string, unknown>)[field];
       }
       return {
         ir,

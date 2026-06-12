@@ -44,6 +44,96 @@ async function runPlayground() {
   });
 }
 
+async function runTranslate(args: string[]) {
+  if (args.length < 2) {
+    console.error('Usage: intentc translate <ir-file.json> <target-lang>');
+    console.error('  target-lang: zh-CN | en-US | ru-RU');
+    process.exit(1);
+  }
+
+  const [file, lang] = args;
+  if (!['zh-CN', 'en-US', 'ru-RU'].includes(lang)) {
+    console.error('Target language must be: zh-CN, en-US, or ru-RU');
+    process.exit(1);
+  }
+
+  const langNames: Record<string, string> = { 'zh-CN': 'Chinese', 'en-US': 'English', 'ru-RU': 'Russian' };
+
+  const fs = await import('fs');
+  const ir = JSON.parse(fs.readFileSync(file, 'utf-8'));
+
+  const { compile } = await import('./compiler');
+  console.error(`🌐 Translating IR content to ${langNames[lang]}...`);
+
+  // Lock design + intent, allow layout content to be translated
+  const result = await compile(
+    `Here is an existing Intent IR. Translate ALL text content (headlines, descriptions, labels, questions, answers, button text, etc.) to ${langNames[lang]}. Keep the exact same section types, IDs, priorities, and structure. Only change the text content.\n\nExisting IR:\n\`\`\`json\n${JSON.stringify(ir, null, 2)}\n\`\`\``,
+    {
+      lockFields: ['design', 'intent'],
+      existingIR: ir,
+    }
+  );
+
+  // Verify section structure is preserved
+  const origIds = ir.layout.map((s: any) => `${s.type}:${s.id}`).join(',');
+  const newIds = result.ir.layout.map((s: any) => `${s.type}:${s.id}`).join(',');
+  if (origIds !== newIds) {
+    console.error(`⚠️  Section structure changed! Original: [${origIds}] → New: [${newIds}]`);
+    console.error('   Restoring original structure...');
+    result.ir.layout = JSON.parse(JSON.stringify(ir.layout));
+  }
+
+  // Also update the language field
+  result.ir.intent.language = lang;
+
+  const output = file.replace('.json', `-${lang.split('-')[0]}.json`);
+  fs.writeFileSync(output, JSON.stringify(result.ir, null, 2));
+  console.error(`✅ Written to ${output} (${result.ir.layout.length} sections)`);
+}
+
+async function runTemplate(args: string[]) {
+  const fs = await import('fs');
+  const path = await import('path');
+
+  const templates: Record<string, { desc: string; file: string }> = {
+    landing: { desc: 'Generic product landing page (hero + features + contact)', file: 'landing' },
+    saas: { desc: 'SaaS with pricing table (hero + features + pricing + faq + footer)', file: 'saas' },
+    portfolio: { desc: 'Creative portfolio (hero + gallery + testimonials + footer)', file: 'portfolio' },
+    manufacturing: { desc: 'B2B factory showcase like DR.Warm (hero + specs + faq + contact)', file: 'manufacturing' },
+  };
+
+  const cmd = args[0];
+
+  if (cmd === 'list') {
+    console.log('Available templates:\n');
+    for (const [name, t] of Object.entries(templates)) {
+      console.log(`  ${name.padEnd(16)} ${t.desc}`);
+    }
+    return;
+  }
+
+  if (cmd === 'show' && args[1]) {
+    const t = templates[args[1]];
+    if (!t) { console.error(`Unknown template: ${args[1]}`); process.exit(1); }
+
+    const playgroundPath = path.join(__dirname, '..', 'src', 'playground', 'index.html');
+    const html = fs.readFileSync(playgroundPath, 'utf-8');
+    const match = html.match(new RegExp(`"${t.file}":({[^}]*?\\})`));
+    if (match) {
+      try {
+        const ir = JSON.parse(match[1]);
+        console.log(JSON.stringify(ir, null, 2));
+      } catch {
+        console.error('Failed to parse template from playground');
+      }
+    }
+    return;
+  }
+
+  console.error('Usage: intentc template list');
+  console.error('       intentc template show <name>');
+}
+
 async function runDiff(args: string[]) {
   if (args.length < 2) {
     console.error('Usage: intentc diff <file-a.json> <file-b.json>');
@@ -110,6 +200,18 @@ async function main() {
   // Handle 'play' subcommand — launch IR playground
   if (args[0] === 'play') {
     await runPlayground();
+    return;
+  }
+
+  // Handle 'translate' subcommand
+  if (args[0] === 'translate') {
+    await runTranslate(args.slice(1));
+    return;
+  }
+
+  // Handle 'template' subcommand
+  if (args[0] === 'template') {
+    await runTemplate(args.slice(1));
     return;
   }
 
