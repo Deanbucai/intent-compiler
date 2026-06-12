@@ -65,6 +65,10 @@ export type SectionType =
   | 'faq'
   | 'contact_form'
   | 'trust_badges'
+  | 'pricing'
+  | 'gallery'
+  | 'cta'
+  | 'testimonials'
   | 'footer'
   | 'custom';
 
@@ -137,6 +141,42 @@ export interface FooterContent {
   copyright?: string;
 }
 
+export interface PricingContent {
+  title?: string;
+  items: Array<{
+    name: string;
+    price: string;
+    description?: string;
+    features?: string[];
+    highlighted?: boolean;
+  }>;
+}
+
+export interface GalleryContent {
+  title?: string;
+  images: Array<{
+    src: string;
+    alt: string;
+    caption?: string;
+  }>;
+}
+
+export interface CtaContent {
+  headline?: string;
+  body?: string;
+  buttonText: string;
+  buttonAction: string;
+}
+
+export interface TestimonialsContent {
+  title?: string;
+  items: Array<{
+    quote: string;
+    name: string;
+    role?: string;
+  }>;
+}
+
 export interface CustomContent {
   component: string;
   props?: Record<string, unknown>;
@@ -150,6 +190,10 @@ export type SectionContent =
   | FaqContent
   | ContactFormContent
   | TrustBadgesContent
+  | PricingContent
+  | GalleryContent
+  | CtaContent
+  | TestimonialsContent
   | FooterContent
   | CustomContent;
 
@@ -258,6 +302,10 @@ export const INTENT_IR_SCHEMA = {
               'faq',
               'contact_form',
               'trust_badges',
+              'pricing',
+              'gallery',
+              'cta',
+              'testimonials',
               'footer',
               'custom',
             ],

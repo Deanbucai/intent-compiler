@@ -50,6 +50,10 @@ function buildSystemPrompt(): string {
    - "常见问题/问答" → faq
    - "联系我们/表单/询价" → contact_form
    - "认证/资质/证书/合作方" → trust_badges
+   - "价格/套餐/定价" → pricing
+   - "图片展示/案例/作品集" → gallery
+   - "行动号召/立即加入/CTA" → cta
+   - "客户评价/用户反馈/案例" → testimonials
    - "底部/版权/链接" → footer
    - Anything that doesn't fit → custom
 5. Assign priorities based on the order the user mentions sections (10, 20, 30...).

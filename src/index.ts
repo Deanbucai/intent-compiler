@@ -12,6 +12,7 @@
 export { compile } from './compiler';
 export type { CompileOptions, CompileResult, Provider } from './compiler';
 export { renderHTML } from './renderers/html';
+export { renderReact } from './renderers/react';
 export { INTENT_IR_SCHEMA } from './schema';
 export type {
   IntentIR,

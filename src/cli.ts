@@ -11,11 +11,12 @@
 
 import { compile } from './compiler';
 import { renderHTML } from './renderers/html';
+import { renderReact } from './renderers/react';
 
 interface CLIOptions {
   input?: string;
   output?: string;
-  render?: 'html' | 'json';
+  render?: 'html' | 'react' | 'json';
   provider?: 'anthropic' | 'openai';
   model?: string;
 }
@@ -60,6 +61,8 @@ async function main() {
   let output: string;
   if (opts.render === 'html') {
     output = renderHTML(result.ir);
+  } else if (opts.render === 'react') {
+    output = renderReact(result.ir);
   } else {
     output = JSON.stringify(result.ir, null, 2);
   }
@@ -113,7 +116,7 @@ Usage:
 Options:
   -i, --input <file>    Read input from file
   -o, --output <file>   Write output to file (default: stdout)
-  -r, --render <type>   Output format: json (default) or html
+  -r, --render <type>   Output format: json (default), html, or react
   -p, --provider <p>    LLM provider: anthropic (default) or openai
   -m, --model <model>   Override default model
   -h, --help            Show this help
