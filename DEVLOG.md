@@ -128,3 +128,28 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 - IR preprocessing before code generation → eliminates NL ambiguity
 - STDIO transport → auto-started by agent, zero config
 
+---
+
+## 2026-06-12 — v0.0.6 (Renderer Ecosystem)
+
+### Renderer Registry
+- `RendererRegistry` class — centralized Map-based registration
+- `IntentRenderer` interface: `{ meta: RendererMeta, render: (ir) => string }`
+- Contract validation at registration time
+- Priority-based ordering
+- Domain-aware filtering
+
+### External Renderer Support
+- `discoverRenderers(dir)` — auto-scan directory for renderer files
+- Example: `examples/renderers/pdf-brochure.ts` — third-party PDF brochure renderer
+- Drop a `.ts` or `.js` file → register → available in CLI and MCP
+
+### CLI Commands
+- `intentc renderer list` — list all registered renderers (built-in + external)
+- `intentc renderer discover <dir>` — scan and register from directory
+- `intentc renderer add <dir>` — alias for discover
+
+### MCP Extension
+- `list_renderers` MCP tool added
+- `render_format` now uses registry (not hardcoded imports)
+

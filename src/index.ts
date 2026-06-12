@@ -16,6 +16,8 @@ export { renderReact } from './renderers/react';
 export { renderMarkdown } from './renderers/markdown';
 export { renderSlideDeck } from './renderers/slide';
 export { renderDocument } from './renderers/document';
+export { registry, discoverRenderers, registerBuiltins } from './renderers/registry';
+export type { IntentRenderer, RendererMeta } from './renderers/registry';
 export { INTENT_IR_SCHEMA } from './schema';
 export type {
   IntentIR,

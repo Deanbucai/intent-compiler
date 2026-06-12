@@ -136,6 +136,53 @@ async function runTemplate(args: string[]) {
   console.error('       intentc template show <name>');
 }
 
+async function runRendererCmd(args: string[]) {
+  const { registry, discoverRenderers, registerBuiltins } = await import('./renderers/registry');
+
+  // Register built-ins first
+  registerBuiltins();
+
+  const cmd = args[0];
+
+  if (cmd === 'list') {
+    const renderers = registry.list();
+    if (renderers.length === 0) {
+      console.log('No renderers registered.');
+      return;
+    }
+    console.log(`Registered renderers (${renderers.length}):\n`);
+    for (const r of renderers) {
+      const builtin = r.meta.id === 'html' || r.meta.id === 'react' || r.meta.id === 'markdown' || r.meta.id === 'slide' || r.meta.id === 'document';
+      console.log(`  ${r.meta.id.padEnd(16)} [${r.meta.domain.padEnd(12)} → ${r.meta.outputFormat.padEnd(10)}] ${builtin ? '(built-in)' : '(external)'}  ${r.meta.description}`);
+    }
+    return;
+  }
+
+  if (cmd === 'discover' && args[1]) {
+    const discovered = await discoverRenderers(args[1]);
+    console.log(`Discovered ${discovered.length} renderer(s) from ${args[1]}:`);
+    for (const r of discovered) {
+      console.log(`  + ${r.meta.id} — ${r.meta.name}`);
+    }
+    return;
+  }
+
+  if (cmd === 'add' && args[1]) {
+    const path = args[1];
+    const discovered = await discoverRenderers(path);
+    if (discovered.length === 0) {
+      console.log(`No valid renderers found in ${path}`);
+    } else {
+      console.log(`Registered ${discovered.length} renderer(s). Use "intentc renderer list" to see all.`);
+    }
+    return;
+  }
+
+  console.error('Usage: intentc renderer list');
+  console.error('       intentc renderer discover <directory>');
+  console.error('       intentc renderer add <directory>');
+}
+
 async function runDiff(args: string[]) {
   if (args.length < 2) {
     console.error('Usage: intentc diff <file-a.json> <file-b.json>');
@@ -214,6 +261,12 @@ async function main() {
   // Handle 'template' subcommand
   if (args[0] === 'template') {
     await runTemplate(args.slice(1));
+    return;
+  }
+
+  // Handle 'renderer' subcommand
+  if (args[0] === 'renderer') {
+    await runRendererCmd(args.slice(1));
     return;
   }
 

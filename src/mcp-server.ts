@@ -20,13 +20,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod/v3';
 import { readFileSync, writeFileSync } from 'fs';
+import { registry, registerBuiltins } from './renderers/registry';
+
+// Register built-in renderers at startup
+registerBuiltins();
 
 // Dynamic imports for the compiler core (avoid circular deps)
 async function getCompiler() {
   return await import('./compiler');
-}
-async function getRenderers() {
-  return await import('./index');
 }
 
 // ─── Server Setup ────────────────────────────────────────────────
@@ -127,28 +128,20 @@ server.registerTool(
   },
   async ({ ir_json, format, output_path }) => {
     const ir = JSON.parse(ir_json);
-    const renderers = await getRenderers();
 
-    let output: string;
-    switch (format) {
-      case 'html':
-        output = renderers.renderHTML(ir);
-        break;
-      case 'react':
-        output = renderers.renderReact(ir);
-        break;
-      case 'markdown':
-        output = renderers.renderMarkdown(ir);
-        break;
-      case 'slide':
-        output = renderers.renderSlideDeck(ir);
-        break;
-      case 'document':
-        output = renderers.renderDocument(ir);
-        break;
-      default:
-        output = renderers.renderHTML(ir);
+    // Look up the renderer from the registry
+    const formatToRendererId: Record<string, string> = {
+      html: 'html', react: 'react', markdown: 'markdown',
+      slide: 'slide', document: 'document',
+    };
+    const rendererId = formatToRendererId[format] || 'html';
+    const renderer = registry.get(rendererId);
+
+    if (!renderer) {
+      return { content: [{ type: 'text', text: `Renderer "${rendererId}" not found in registry.` }], isError: true };
     }
+
+    const output = renderer.render(ir);
 
     if (output_path) {
       writeFileSync(output_path, output, 'utf-8');
@@ -272,6 +265,30 @@ server.registerTool(
           type: 'text',
           text: Object.entries(templates)
             .map(([k, v]) => `  ${k.padEnd(16)} ${v}`)
+            .join('\n'),
+        },
+      ],
+    };
+  }
+);
+
+// ─── Tool: list_renderers ────────────────────────────────────────
+
+server.registerTool(
+  'list_renderers',
+  {
+    title: 'List Available Renderers',
+    description: 'List all registered renderers (built-in and external). Shows id, domain, output format, and description.',
+    inputSchema: {},
+  },
+  async () => {
+    const renderers = registry.list();
+    return {
+      content: [
+        {
+          type: 'text',
+          text: renderers
+            .map((r) => `${r.meta.id.padEnd(16)} [${r.meta.domain} → ${r.meta.outputFormat}] ${r.meta.description}`)
             .join('\n'),
         },
       ],
