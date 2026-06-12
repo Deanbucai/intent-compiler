@@ -9,8 +9,8 @@
  * const html = renderHTML(ir);
  * ```
  */
-export { compile } from './compiler';
-export type { CompileOptions, CompileResult, Provider } from './compiler';
+export { compile, compileStream } from './compiler';
+export type { CompileOptions, CompileResult, Provider, StreamEvent } from './compiler';
 export { renderHTML } from './renderers/html';
 export { renderReact } from './renderers/react';
 export { renderMarkdown } from './renderers/markdown';

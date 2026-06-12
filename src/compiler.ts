@@ -40,6 +40,16 @@ export interface CompileResult {
 }
 
 /**
+ * Streaming event emitted during compilation.
+ */
+export type StreamEvent =
+  | { type: 'start'; model: string }
+  | { type: 'token'; text: string }
+  | { type: 'progress'; message: string }
+  | { type: 'complete'; ir: IntentIR; usage: { input: number; output: number } }
+  | { type: 'error'; message: string };
+
+/**
  * System prompt that turns the LLM into a compiler frontend.
  * Includes the full JSON Schema so the LLM knows the exact contract.
  */
@@ -285,4 +295,74 @@ export async function compile(
   }
 
   throw lastError ?? new Error('Compilation failed');
+}
+
+/**
+ * Streaming compile — yields events as the LLM generates.
+ * Use for progress UI, playground, or large compilations.
+ */
+export async function* compileStream(
+  input: string,
+  opts: CompileOptions = {}
+): AsyncGenerator<StreamEvent> {
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not found');
+
+  const Anthropic = await import('@anthropic-ai/sdk');
+  const client = new Anthropic.default({
+    apiKey,
+    baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
+  });
+
+  const systemPrompt = buildSystemPrompt(opts.lockFields, opts.existingIR);
+  const model = opts.providerOpts?.model || process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+
+  yield { type: 'start', model };
+
+  const stream = client.messages.stream({
+    model,
+    max_tokens: opts.providerOpts?.maxTokens || 4096,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: input }],
+  });
+
+  let fullText = '';
+
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && 'text' in event.delta) {
+      fullText += event.delta.text;
+      yield { type: 'token', text: event.delta.text };
+    }
+  }
+
+  const final = await stream.finalMessage();
+  const text = (final.content as Array<{ type: string; text?: string }>)
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text || '')
+    .join('');
+
+  // Parse and validate
+  try {
+    const jsonStr = extractJSON(text);
+    const parsed = JSON.parse(jsonStr);
+
+    if (validateIR(parsed)) {
+      const ir = parsed as IntentIR;
+      if (opts.lockFields && opts.lockFields.length > 0 && opts.existingIR) {
+        for (const field of opts.lockFields) {
+          (ir as unknown as Record<string, unknown>)[field] = (opts.existingIR as unknown as Record<string, unknown>)[field];
+        }
+      }
+      yield {
+        type: 'complete',
+        ir,
+        usage: { input: final.usage.input_tokens, output: final.usage.output_tokens },
+      };
+    } else {
+      const errors = validateIR.errors?.map((e) => `${e.instancePath} ${e.message}`).join('; ');
+      yield { type: 'error', message: `IR validation failed: ${errors}` };
+    }
+  } catch (e: unknown) {
+    yield { type: 'error', message: `Parse failed: ${e instanceof Error ? e.message : String(e)}` };
+  }
 }

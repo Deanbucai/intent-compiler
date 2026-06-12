@@ -246,6 +246,122 @@ async function runMemoryCmd(args: string[]) {
   memory.close();
 }
 
+async function runInit(args: string[]) {
+  const readline = await import('node:readline');
+  const fs = await import('fs');
+  const path = await import('path');
+
+  const dir = args[0] || 'my-landing-page';
+
+  if (fs.existsSync(dir)) {
+    console.error(`Directory "${dir}" already exists. Choose a different name.`);
+    process.exit(1);
+  }
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q: string): Promise<string> => new Promise((resolve) => rl.question(q, resolve));
+
+  console.log('\n🧁 Intent Compiler — New Project\n');
+
+  const domain = await ask('1. Domain [1=website 2=slide 3=document] (1): ') || '1';
+  const domainMap: Record<string, string> = { '1': 'web_page', '2': 'slide_deck', '3': 'document' };
+  const domainVal = domainMap[domain] || 'web_page';
+
+  const industryQ = domainVal === 'web_page'
+    ? '2. Industry [mfg/saas/food/retail/health/other] (other): '
+    : '2. Topic (presentation): ';
+  const industry = await ask(industryQ) || 'other';
+
+  const lang = await ask('3. Language [zh/en/ru] (zh): ') || 'zh';
+  const langMap: Record<string, string> = { 'zh': 'zh-CN', 'en': 'en-US', 'ru': 'ru-RU' };
+
+  const schemeQ = domainVal === 'web_page'
+    ? '4. Style [1=dark-gold 2=light-blue 3=dark-blue 4=warm-pink 5=minimal] (1): '
+    : '4. Style [1=dark 2=light 3=warm] (1): ';
+  const scheme = await ask(schemeQ) || '1';
+  const schemeMap: Record<string, { color: string; tone: string; typo: string }> = {
+    '1': { color: 'dark-gold', tone: 'professional', typo: 'modern-sans' },
+    '2': { color: 'light-blue', tone: 'professional', typo: 'modern-sans' },
+    '3': { color: 'dark-blue', tone: 'professional-tech', typo: 'modern-sans' },
+    '4': { color: 'warm-pink-cream-gold', tone: 'elegant-sweet', typo: 'serif' },
+    '5': { color: 'minimal-white', tone: 'minimal', typo: 'modern-sans' },
+  };
+  const design = schemeMap[scheme] || schemeMap['1'];
+
+  rl.close();
+
+  // Build scaffold IR
+  const scaffoldIR: Record<string, unknown> = {
+    $schema: 'https://intent-compiler.dev/schema/v0.1.0',
+    version: '0.1.0',
+    intent: {
+      domain: domainVal,
+      type: domainVal === 'web_page' ? 'landing' : domainVal === 'slide_deck' ? 'presentation' : 'report',
+      industry,
+      language: langMap[lang] || 'zh-CN',
+      summary: 'Edit this summary to describe your project',
+    },
+    design: {
+      colorScheme: design.color,
+      tone: design.tone,
+      typography: design.typo,
+      responsive: true,
+    },
+    layout: domainVal === 'web_page' ? [
+      { id: 'hero', type: 'hero', priority: 10, content: { headline: 'Your Headline', subheadline: 'Your subheadline here.', cta: { text: 'Get Started', action: 'signup' } } },
+      { id: 'features', type: 'features', priority: 20, content: { title: 'Features', items: [{ title: 'Feature 1', description: 'Description here.' }] } },
+      { id: 'contact', type: 'contact_form', priority: 90, content: { title: 'Contact', fields: [{ name: 'email', label: 'Email', type: 'email', required: true }] } },
+    ] : domainVal === 'slide_deck' ? [
+      { id: 'title', type: 'title_slide', priority: 10, content: { title: 'Presentation Title', subtitle: 'Subtitle', presenter: 'Your Name' } },
+      { id: 'content', type: 'content_slide', priority: 20, content: { title: 'Topic', body: 'Content here.' } },
+      { id: 'end', type: 'ending_slide', priority: 90, content: { title: 'Thank You', contact: 'your@email.com' } },
+    ] : [
+      { id: 'title', type: 'document_title', priority: 10, content: { title: 'Document Title', subtitle: 'Subtitle', author: 'Author' } },
+      { id: 'ch1', type: 'chapter', priority: 20, content: { title: 'Chapter 1' } },
+      { id: 'body', type: 'body', priority: 30, content: { text: 'Content here.' } },
+    ],
+  };
+
+  // Create directory and files
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'ir.json'), JSON.stringify(scaffoldIR, null, 2));
+  fs.writeFileSync(path.join(dir, 'CLAUDE.md'), `# Agent Configuration
+
+## Auto-Invoke Rules
+Before generating any ${domainVal === 'web_page' ? 'web page' : domainVal === 'slide_deck' ? 'presentation' : 'document'}, you MUST:
+1. Read \`ir.json\` to understand the exact structure and design system
+2. Use the IR as your spec when writing code
+3. Verify every section from the IR is present in your output
+
+## Design System
+- Color: ${design.color}
+- Tone: ${design.tone}
+- Typography: ${design.typo}
+
+## Project IR
+See \`ir.json\` for the complete structured intent.
+`);
+  fs.writeFileSync(path.join(dir, '.env.example'), `# Intent Compiler — API Keys
+# Choose one:
+
+# Claude (Anthropic)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# DeepSeek (Anthropic-compatible)
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_AUTH_TOKEN=sk-...
+
+# OpenAI / GPT
+OPENAI_API_KEY=sk-...
+`);
+
+  console.log(`\n✅ Created ${dir}/`);
+  console.log(`   ├── ir.json          ← Edit this to customize your ${domainVal === 'web_page' ? 'page' : domainVal === 'slide_deck' ? 'slides' : 'document'}`);
+  console.log(`   ├── CLAUDE.md        ← Agent auto-invoke rules`);
+  console.log(`   └── .env.example     ← API key setup`);
+  console.log(`\nNext: cd ${dir} && echo "your description" | npx intentc --render html --output index.html`);
+}
+
 async function runDiff(args: string[]) {
   if (args.length < 2) {
     console.error('Usage: intentc diff <file-a.json> <file-b.json>');
@@ -336,6 +452,12 @@ async function main() {
   // Handle 'memory' subcommand
   if (args[0] === 'memory') {
     await runMemoryCmd(args.slice(1));
+    return;
+  }
+
+  // Handle 'init' subcommand
+  if (args[0] === 'init') {
+    await runInit(args.slice(1));
     return;
   }
 

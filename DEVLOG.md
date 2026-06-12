@@ -195,3 +195,23 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 ### CLI Commands
 - `intentc memory stats|search|patterns|clear`
 
+### Documentation
+- CHANGELOG.md — standard changelog format for all versions v0.0.1–v0.0.8
+
+---
+
+## 2026-06-12 — v0.0.9 (Init + Streaming)
+
+### `intentc init`
+- Interactive CLI — 4 questions → scaffold project
+- Generates: ir.json, CLAUDE.md, .env.example
+- Supports 3 domains, 5 color styles, 6 industries
+
+### Streaming compile
+- `compileStream()` — async generator: start → token → complete/error
+- Uses Anthropic SDK streaming API
+- For Playground progress UI and large compilations
+
+### Fixes
+- `.intent-compiler/` added to .gitignore
+
