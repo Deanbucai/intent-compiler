@@ -15,6 +15,14 @@ export interface CompileOptions {
   providerOpts?: ProviderOptions & { baseURL?: string };
   /** Max retries on validation failure */
   maxRetries?: number;
+  /**
+   * Partial recompilation: lock specific top-level fields.
+   * e.g. lockFields: ['design'] means design is preserved from existingIR,
+   * only layout and intent are regenerated.
+   */
+  lockFields?: Array<'intent' | 'design' | 'layout'>;
+  /** Required when lockFields is set — the existing IR to preserve from */
+  existingIR?: IntentIR;
 }
 
 export interface CompileResult {
@@ -32,9 +40,27 @@ export interface CompileResult {
  * System prompt that turns the LLM into a compiler frontend.
  * Includes the full JSON Schema so the LLM knows the exact contract.
  */
-function buildSystemPrompt(): string {
+function buildSystemPrompt(lockedFields?: string[], existingIR?: Partial<IntentIR>): string {
   const schemaStr = JSON.stringify(INTENT_IR_SCHEMA, null, 2);
+
+  let lockInstructions = '';
+  if (lockedFields && lockedFields.length > 0 && existingIR) {
+    const lockedData: Record<string, unknown> = {};
+    for (const f of lockedFields) {
+      if (f in existingIR) lockedData[f] = (existingIR as Record<string, unknown>)[f];
+    }
+    lockInstructions = `
+## LOCKED FIELDS — DO NOT MODIFY
+The following fields are LOCKED and MUST be preserved exactly as-is in your output:
+\`\`\`json
+${JSON.stringify(lockedData, null, 2)}
+\`\`\`
+Copy these fields verbatim into your output. Only generate the UNLOCKED fields based on the user's input.
+`;
+  }
+
   return `You are a compiler frontend. Your job is to parse natural language descriptions of web pages and output structured Intent IR JSON.
+${lockInstructions}
 
 ## Rules
 1. Output ONLY valid JSON — no markdown, no code fences, no explanation.
@@ -157,7 +183,7 @@ export async function compile(
   input: string,
   opts: CompileOptions = {}
 ): Promise<CompileResult> {
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = buildSystemPrompt(opts.lockFields, opts.existingIR);
   const maxRetries = opts.maxRetries ?? 2;
 
   let lastError: Error | null = null;
@@ -199,6 +225,20 @@ export async function compile(
         continue;
       }
       throw lastError;
+    }
+
+    // Post-compilation: force-restore locked fields from existing IR
+    if (opts.lockFields && opts.lockFields.length > 0 && opts.existingIR) {
+      const ir = parsed as IntentIR;
+      for (const field of opts.lockFields) {
+        (ir as Record<string, unknown>)[field] = (opts.existingIR as Record<string, unknown>)[field];
+      }
+      return {
+        ir,
+        raw: lastRaw,
+        usage: result.usage,
+        model: result.model,
+      };
     }
 
     return {
