@@ -7,6 +7,7 @@
  *   intentc --input desc.txt --output ir.json
  *   intentc --input desc.txt --render html --output page.html
  *   echo "build a SaaS landing page" | intentc
+ *   intentc diff a.json b.json
  */
 
 import { compile } from './compiler';
@@ -22,8 +23,69 @@ interface CLIOptions {
   model?: string;
 }
 
+async function runDiff(args: string[]) {
+  if (args.length < 2) {
+    console.error('Usage: intentc diff <file-a.json> <file-b.json>');
+    process.exit(1);
+  }
+
+  const fs = await import('fs');
+  const a = JSON.parse(fs.readFileSync(args[0], 'utf-8'));
+  const b = JSON.parse(fs.readFileSync(args[1], 'utf-8'));
+
+  const changes: string[] = [];
+
+  // Compare intent
+  if (a.intent?.summary !== b.intent?.summary) {
+    changes.push(`📝 Summary: "${a.intent?.summary}" → "${b.intent?.summary}"`);
+  }
+  if (a.intent?.type !== b.intent?.type) {
+    changes.push(`📝 Type: ${a.intent?.type} → ${b.intent?.type}`);
+  }
+
+  // Compare design
+  const designKeys = ['colorScheme', 'tone', 'typography'];
+  for (const key of designKeys) {
+    if (a.design?.[key] !== b.design?.[key]) {
+      changes.push(`🎨 ${key}: "${a.design?.[key]}" → "${b.design?.[key]}"`);
+    }
+  }
+
+  // Compare layout sections
+  const aSections = (a.layout || []) as Array<{ id: string; type: string; priority: number }>;
+  const bSections = (b.layout || []) as Array<{ id: string; type: string; priority: number }>;
+  const aIds = new Set(aSections.map((s) => s.id));
+  const bIds = new Set(bSections.map((s) => s.id));
+
+  for (const s of aSections) {
+    if (!bIds.has(s.id)) changes.push(`➖ Removed: [${s.type}] ${s.id}`);
+  }
+  for (const s of bSections) {
+    if (!aIds.has(s.id)) changes.push(`➕ Added: [${s.type}] ${s.id}`);
+  }
+
+  // Print diff
+  if (changes.length === 0) {
+    console.log('✅ No changes — IRs are identical.');
+    return;
+  }
+
+  console.log(`📊 IR Diff: ${args[0]} → ${args[1]}`);
+  console.log(`   ${changes.length} change(s):\n`);
+  for (const c of changes) {
+    console.log(`   ${c}`);
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
+
+  // Handle 'diff' subcommand
+  if (args[0] === 'diff') {
+    await runDiff(args.slice(1));
+    return;
+  }
+
   const opts = parseArgs(args);
 
   // Read input: from --input file, from stdin, or from positional arg

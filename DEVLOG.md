@@ -52,3 +52,8 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 - 同一份 IR (gym-ir.json) → HTML (7284B) + React (8088B) + Markdown (531B) 三路输出
 - 内容一致性确认（5 sections 完全对应）
 
+### IR Diff 工具
+- `intentc diff a.json b.json` — 人类可读的变更摘要
+- 检测：意图变更、设计变更、section 增删
+- 演示"IR 可版本化"——Agent 对话做不到的事
+
