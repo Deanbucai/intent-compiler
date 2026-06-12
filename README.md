@@ -177,7 +177,7 @@ The Intent IR is a **JSON document** with four top-level sections:
 }
 ```
 
-### Supported Section Types (v0.1.0)
+### Supported Section Types (v0.0.9)
 
 | Type | Description | Content Shape |
 |------|-------------|---------------|
@@ -211,58 +211,40 @@ function renderMyWay(ir: IntentIR): string {
 }
 ```
 
-Planned future renderers: React, Vue, PDF, Markdown, Slide Deck, Email.
+Built-in renderers: HTML, React, Markdown, Slide Deck, Document. Extensible via [renderer registry](src/renderers/registry.ts).
 
 ## Project Structure
 
 ```
 intent-compiler/
 ├── src/
-│   ├── index.ts           # Public API
-│   ├── schema.ts          # IR types + JSON Schema
-│   ├── compiler.ts        # NL → IR compiler (prompt + validate)
-│   ├── cli.ts             # CLI tool
-│   ├── providers/
-│   │   ├── anthropic.ts   # Claude / DeepSeek / OpenRouter
-│   │   └── openai.ts      # GPT / DeepSeek / Kimi
-│   └── renderers/
-│       └── html.ts        # IR → standalone HTML
-├── examples/
-│   └── drwarm.ts          # Real B2B manufacturing site
-├── package.json
-├── tsconfig.json
-├── LICENSE                # MIT
-└── README.md
+│   ├── index.ts              # Public API
+│   ├── schema.ts             # IR types + JSON Schema
+│   ├── compiler.ts           # NL → IR (compile + compileStream)
+│   ├── cli.ts                # CLI tool
+│   ├── mcp-server.ts         # MCP server (STDIO, 6 tools)
+│   ├── ir-memory.ts          # SQLite memory (few-shot learning)
+│   ├── site.ts               # Multi-page site support
+│   ├── providers/            # Anthropic + OpenAI adapters
+│   ├── renderers/            # HTML / React / Markdown / Slide / Document / registry
+│   ├── playground/           # IR Playground (browser editor)
+│   └── __tests__/            # 15 unit tests
+├── examples/                 # DR.Warm + external renderer demo
+├── .github/workflows/        # CI (tsc + test + build)
+└── docs: CHANGELOG, DEVLOG, ROADMAP, CONTRIBUTING, MCP_SETUP, CLAUDE.md, AGENTS.md
 ```
 
 ## Roadmap
 
-### v0.1.0 ✅ Now
-- [x] Web page domain IR schema
-- [x] Anthropic + OpenAI provider support
-- [x] Reference HTML renderer (8 section types, zero JS dependency)
-- [x] CLI + API
+See [ROADMAP.md](ROADMAP.md) for the full version history and upcoming plans.
 
-### v0.2.0 (Planned)
-- [ ] Domain extension: documents, slides, emails
-- [ ] Streaming compilation
-- [ ] `intentc init` project scaffolding
-- [ ] Renderer: React components
-
-### v1.0.0 (Vision)
-- [ ] Multi-domain IR standard (web, doc, app, data)
-- [ ] Community renderer registry
-- [ ] Plugin system for custom section types
-- [ ] AGENTS.md / CLAUDE.md auto-generation from IR
+**Current (v0.0.9):** 5 renderers · 6 MCP tools · 3 domains · IR memory with few-shot learning · streaming compile · `intentc init` scaffolding · multi-language (zh-CN/en-US/ru-RU) · multi-page site support.
 
 ## Contributing
 
-This is a v0.1.0 — rough edges expected. Open an issue or PR.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture overview, development rules, and good first issues.
 
-1. **Found a bug?** Open an issue with the NL input and expected output.
-2. **Want a new section type?** Propose it with the content shape.
-3. **Built a renderer?** We'd love to link it here.
-4. **Want to extend the IR to a new domain?** Let's discuss.
+Quick links: [CHANGELOG.md](CHANGELOG.md) · [DEVLOG.md](DEVLOG.md) · [MCP_SETUP.md](MCP_SETUP.md)
 
 ## License
 

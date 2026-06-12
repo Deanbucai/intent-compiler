@@ -362,6 +362,69 @@ OPENAI_API_KEY=sk-...
   console.log(`\nNext: cd ${dir} && echo "your description" | npx intentc --render html --output index.html`);
 }
 
+async function runSiteCmd(args: string[]) {
+  const { buildSite, createDefaultSite } = await import('./site');
+  const fs = await import('fs');
+  const path = await import('path');
+
+  const cmd = args[0];
+
+  if (cmd === 'init' || !cmd) {
+    const dir = args[1] || '.';
+    const readline = await import('node:readline');
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const ask = (q: string): Promise<string> => new Promise((r) => rl.question(q, r));
+
+    console.log('\n🌐 Multi-Page Site Setup\n');
+    const name = await ask('Site name (My Site): ') || 'My Site';
+    const lang = await ask('Language [zh/en/ru] (zh): ') || 'zh';
+    const langMap: Record<string, string> = { 'zh': 'zh-CN', 'en': 'en-US', 'ru': 'ru-RU' };
+    rl.close();
+
+    const site = createDefaultSite(name);
+    site.language = langMap[lang] || 'zh-CN';
+
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'site.json'), JSON.stringify(site, null, 2));
+
+    // Create a sample index page
+    const indexIR = {
+      $schema: 'https://intent-compiler.dev/schema/v0.1.0',
+      version: '0.1.0',
+      intent: { domain: 'web_page', type: 'landing', language: site.language, summary: `${name} — Home` },
+      design: site.design,
+      layout: [
+        { id: 'hero', type: 'hero', priority: 10, content: { headline: `Welcome to ${name}`, subheadline: 'Your tagline here.', cta: { text: 'Learn More', action: 'about' } } },
+      ],
+    };
+    fs.writeFileSync(path.join(dir, 'index.ir.json'), JSON.stringify(indexIR, null, 2));
+
+    console.log(`\n✅ Multi-page site at ${dir}/`);
+    console.log(`   site.json      ← shared design + nav + footer`);
+    console.log(`   index.ir.json  ← homepage (add more: about.ir.json, contact.ir.json)`);
+    console.log(`\nNext: intentc site build ${dir}`);
+    return;
+  }
+
+  if (cmd === 'build') {
+    const dir = args[1] || '.';
+    console.log(`🏗  Building site from ${dir}/site.json...\n`);
+    const results = buildSite(dir);
+    if (results.length === 0) {
+      console.log('No pages built.');
+      return;
+    }
+    console.log(`\n✅ Built ${results.length} page(s) → ${dir}/_site/`);
+    for (const r of results) {
+      console.log(`   ${r.url.padEnd(20)} ${r.size}B`);
+    }
+    return;
+  }
+
+  console.error('Usage: intentc site init [dir]');
+  console.error('       intentc site build [dir]');
+}
+
 async function runDiff(args: string[]) {
   if (args.length < 2) {
     console.error('Usage: intentc diff <file-a.json> <file-b.json>');
@@ -458,6 +521,12 @@ async function main() {
   // Handle 'init' subcommand
   if (args[0] === 'init') {
     await runInit(args.slice(1));
+    return;
+  }
+
+  // Handle 'site' subcommand
+  if (args[0] === 'site') {
+    await runSiteCmd(args.slice(1));
     return;
   }
 
