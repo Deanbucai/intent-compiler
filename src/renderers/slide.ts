@@ -45,7 +45,7 @@ function rContent(s: Section, colors: ReturnType<typeof getColors>): string {
 <div class="slide" style="background:${colors.bg};padding:80px 60px">
   <h2 style="font-size:2rem;color:${colors.accent};margin-bottom:32px;font-weight:700">${c.title}</h2>
   <div style="font-size:1.1rem;color:${colors.text};line-height:1.8;max-width:800px">
-    ${c.body.split('\n').map(p => `<p style="margin-bottom:16px">${p}</p>`).join('')}
+    ${(c.body || '').split('\n').map(p => `<p style="margin-bottom:16px">${p}</p>`).join('')}
   </div>
   ${c.image ? `<img src="${c.image}" style="max-width:60%;margin-top:24px;border-radius:8px" alt="">` : ''}
 </div>`;

@@ -83,3 +83,29 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 - `intentc template list` — 4 个模板
 - 模板已内嵌到 playground
 
+---
+
+## 2026-06-12 — v0.0.4 (Multi-Domain: Web + Slide + Document)
+
+### Slide Deck Domain
+- 6 种 slide section types: title_slide/content_slide/bullets_slide/quote_slide/image_slide/ending_slide
+- `renderSlideDeck(ir)` → 独立 HTML 演示文稿
+- 键盘导航（← → Space）、幻灯片计数器、点击翻页
+- `--render slide` CLI 支持
+
+### Document Domain
+- 7 种 document section types: document_title/chapter/body/doc_table/doc_image/toc
+- `renderDocument(ir)` → 打印友好的 HTML 文档
+- Serif 字体、自动目录、`@media print` 适配 PDF 导出
+- `--render document` CLI 支持
+
+### Schema 扩展
+- `intent.domain` 从 `'web_page'` 扩展为 `'web_page' | 'slide_deck' | 'document'`
+- 总 section type 从 12 种扩展到 24 种
+- Compiler prompt 支持三领域 section 映射
+
+### 跨领域同源验证
+- 同一品牌描述（DR.WARM）→ 三领域编译
+- Web (3 sections) + Slide (4 slides) + Document (4 chapters)
+- 三份输出共享一致的品牌信息和设计系统
+
