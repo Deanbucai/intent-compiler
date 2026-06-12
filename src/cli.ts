@@ -23,6 +23,27 @@ interface CLIOptions {
   model?: string;
 }
 
+async function runPlayground() {
+  const http = await import('http');
+  const fs = await import('fs');
+  const path = await import('path');
+
+  const playgroundPath = path.join(__dirname, '..', 'src', 'playground', 'index.html');
+  const html = fs.readFileSync(playgroundPath, 'utf-8');
+
+  const server = http.createServer((_req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
+  });
+
+  const PORT = 3456;
+  server.listen(PORT, () => {
+    console.log(`🎮 IR Playground → http://localhost:${PORT}`);
+    console.log('   Edit IR JSON on the left, preview updates on the right.');
+    console.log('   Press Ctrl+C to stop.');
+  });
+}
+
 async function runDiff(args: string[]) {
   if (args.length < 2) {
     console.error('Usage: intentc diff <file-a.json> <file-b.json>');
@@ -83,6 +104,12 @@ async function main() {
   // Handle 'diff' subcommand
   if (args[0] === 'diff') {
     await runDiff(args.slice(1));
+    return;
+  }
+
+  // Handle 'play' subcommand — launch IR playground
+  if (args[0] === 'play') {
+    await runPlayground();
     return;
   }
 

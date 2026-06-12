@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intent IR Playground — v0.0.3</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d0d12;--surface:#16161e;--border:#252530;--text:#d4d4d8;--accent:#c9a84c;--muted:#71717a;--error:#f87171}
+body{background:var(--bg);color:var(--text);font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+header h1{font-size:14px;font-weight:600;color:var(--accent)}
+header .actions{display:flex;gap:8px}
+header button,header select{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit}
+header button:hover{background:var(--surface);border-color:var(--accent)}
+main{display:flex;flex:1;overflow:hidden}
+.panel{flex:1;display:flex;flex-direction:column;min-width:0}
+.panel-header{padding:8px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+#editor{flex:1;padding:12px;background:var(--bg);color:var(--text);border:none;resize:none;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.6;tab-size:2;outline:none}
+#editor:focus{border-color:var(--accent)}
+#preview-frame{flex:1;border:none;background:#fff}
+.divider{width:4px;background:var(--border);cursor:col-resize;flex-shrink:0;transition:background .15s}
+.divider:hover{background:var(--accent)}
+.error-bar{background:var(--error);color:#fff;padding:6px 12px;font-size:12px;display:none;flex-shrink:0}
+.error-bar.show{display:block}
+.status{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Intent IR Playground</h1>
+  <div class="actions">
+    <select id="template-select">
+      <option value="">Load Sample Template...</option>
+      <option value="landing">Landing Page</option>
+      <option value="saas">SaaS</option>
+      <option value="drwarm">DR.Warm B2B</option>
+      <option value="portfolio">Portfolio</option>
+    </select>
+    <button onclick="loadFromClipboard()">📋 Paste</button>
+    <button onclick="copyIR()">📄 Copy IR</button>
+    <button onclick="downloadHTML()">⬇ HTML</button>
+  </div>
+  <span class="status" id="status">ready</span>
+</header>
+
+<div class="error-bar" id="error-bar"></div>
+
+<main>
+  <div class="panel">
+    <div class="panel-header">Intent IR (JSON)</div>
+    <textarea id="editor" spellcheck="false"></textarea>
+  </div>
+  <div class="divider" id="divider"></div>
+  <div class="panel">
+    <div class="panel-header">Live Preview</div>
+    <iframe id="preview-frame" sandbox="allow-same-origin"></iframe>
+  </div>
+</main>
+
+<script>
+// ─── State ────────────────────────────────────────────────
+const editor = document.getElementById('editor');
+const preview = document.getElementById('preview-frame');
+const errorBar = document.getElementById('error-bar');
+const status = document.getElementById('status');
+const templateSelect = document.getElementById('template-select');
+let debounceTimer = null;
+
+// ─── Templates ────────────────────────────────────────────
+const TEMPLATES = {
+  landing: {
+    "$schema":"https://intent-compiler.dev/schema/v0.1.0","version":"0.1.0",
+    "intent":{"domain":"web_page","type":"landing","industry":"generic","language":"en-US","summary":"Product landing page"},
+    "design":{"colorScheme":"dark-gold","tone":"professional","typography":"modern-sans","responsive":true},
+    "layout":[
+      {"id":"hero","type":"hero","priority":10,"content":{"headline":"Build Faster","subheadline":"The all-in-one platform for modern teams.","cta":{"text":"Get Started","action":"signup"}}},
+      {"id":"features","type":"features","priority":20,"content":{"title":"Why Choose Us","items":[{"title":"Fast","description":"Lightning performance"},{"title":"Secure","description":"Enterprise security"},{"title":"Simple","description":"Zero learning curve"}]}},
+      {"id":"contact","type":"contact_form","priority":30,"content":{"title":"Get in Touch","fields":[{"name":"email","label":"Email","type":"email","required":true},{"name":"msg","label":"Message","type":"textarea"}]}}
+    ]
+  },
+  saas: {
+    "$schema":"https://intent-compiler.dev/schema/v0.1.0","version":"0.1.0",
+    "intent":{"domain":"web_page","type":"landing","industry":"saas","language":"en-US","summary":"SaaS product landing"},
+    "design":{"colorScheme":"light-blue","tone":"professional","typography":"modern-sans","responsive":true},
+    "layout":[
+      {"id":"hero","type":"hero","priority":10,"content":{"headline":"Streamline Your Workflow","subheadline":"Save 10 hours per week.","cta":{"text":"Start Free Trial","action":"signup"}}},
+      {"id":"features","type":"features","priority":20,"content":{"title":"Features","items":[{"icon":"⚡","title":"Automation","description":"Auto-repetitive tasks"},{"icon":"📊","title":"Analytics","description":"Real-time dashboards"},{"icon":"🔒","title":"Security","description":"SOC 2 compliant"}]}},
+      {"id":"pricing","type":"pricing","priority":30,"content":{"title":"Plans","items":[{"name":"Starter","price":"$9/mo","features":["5 projects","Basic support"]},{"name":"Pro","price":"$29/mo","features":["Unlimited projects","Priority support","API access"],"highlighted":true}]}},
+      {"id":"faq","type":"faq","priority":40,"content":{"title":"FAQ","items":[{"question":"Can I cancel anytime?","answer":"Yes, no contracts."}]}},
+      {"id":"footer","type":"footer","priority":90,"content":{"brandName":"SaaSCo","copyright":"© 2026"}}
+    ]
+  },
+  drwarm: JSON.parse(JSON.stringify({"$schema":"https://intent-compiler.dev/schema/v0.1.0","version":"0.1.0","intent":{"domain":"web_page","type":"landing","industry":"manufacturing","language":"zh-CN","summary":"DR.WARM B2B外贸展示"},"design":{"colorScheme":"dark-gold","tone":"luxury-industrial","typography":"modern-sans","responsive":true},"layout":[{"id":"hero","type":"hero","priority":10,"content":{"headline":"DR.WARM","subheadline":"中国牙刷之都扬州杭集 · 年产2000万+支","cta":{"text":"探索工厂","action":"factory"}}},{"id":"specs","type":"specs","priority":20,"content":{"title":"技术规格","columns":3,"items":[{"label":"刷毛","value":"PBT杜邦丝"},{"label":"刷柄","value":"PP食品级"},{"label":"产能","value":"月产180万支"},{"label":"起订","value":"3000支"},{"label":"认证","value":"ISO/FDA/CE/SGS"},{"label":"物流","value":"FOB/CIF全球"}]}},{"id":"faq","type":"faq","priority":30,"content":{"title":"常见问题","items":[{"question":"MOQ多少？","answer":"常规3000支起"},{"question":"可以定制吗？","answer":"支持刷毛颜色、丝印、彩盒定制"}]}},{"id":"contact","type":"contact_form","priority":40,"content":{"title":"联系我们","fields":[{"name":"name","label":"姓名/公司","type":"text","required":true},{"name":"email","label":"邮箱","type":"email","required":true},{"name":"msg","label":"需求","type":"textarea"}]}}]}))
+  },
+  portfolio: {
+    "$schema":"https://intent-compiler.dev/schema/v0.1.0","version":"0.1.0",
+    "intent":{"domain":"web_page","type":"portfolio","language":"en-US","summary":"Design portfolio"},
+    "design":{"colorScheme":"minimal-white","tone":"creative","typography":"modern-sans","responsive":true},
+    "layout":[
+      {"id":"hero","type":"hero","priority":10,"content":{"headline":"Jane Designer","subheadline":"UX Designer & Creative Technologist","cta":{"text":"View Work","action":"gallery"}}},
+      {"id":"gallery","type":"gallery","priority":20,"content":{"title":"Selected Work","images":[{"src":"https://placehold.co/600x400/eee/999?text=Project+1","alt":"Project 1","caption":"Mobile App Redesign"},{"src":"https://placehold.co/600x400/eee/999?text=Project+2","alt":"Project 2","caption":"Brand Identity"}]}},
+      {"id":"testimonials","type":"testimonials","priority":30,"content":{"title":"What Clients Say","items":[{"quote":"Incredible work.","name":"Client A","role":"CEO"}]}},
+      {"id":"footer","type":"footer","priority":90,"content":{"brandName":"Jane Designer","copyright":"© 2026"}}
+    ]
+  }
+};
+
+// ─── Mini Renderer (simplified for preview) ──────────────
+function renderPreview(ir) {
+  const colors = getColors(ir.design?.colorScheme || 'dark-gold');
+  const sections = (ir.layout || []).sort((a,b) => a.priority - b.priority);
+
+  const html = sections.map(s => {
+    switch(s.type) {
+      case 'hero': {
+        const c = s.content;
+        return `<section style="padding:80px 24px;text-align:center;background:linear-gradient(135deg,${colors.bg},${colors.surface})">
+<h1 style="font-size:2.5rem;color:${colors.text};margin-bottom:12px">${c.headline||''}</h1>
+${c.subheadline?`<p style="color:${colors.muted};margin-bottom:24px">${c.subheadline}</p>`:''}
+${c.cta?`<a href="#" style="display:inline-block;padding:12px 32px;background:${colors.accent};color:${colors.bg};border-radius:6px;text-decoration:none;font-weight:600">${c.cta.text}</a>`:''}
+</section>`;
+      }
+      case 'features': {
+        const c = s.content;
+        const items = (c.items||[]).map(i => `<div style="padding:24px;background:${colors.surface};border-radius:6px;border:1px solid rgba(255,255,255,0.06)">
+<h3 style="color:${colors.accent};margin-bottom:8px">${i.icon||''} ${i.title}</h3>
+<p style="color:${colors.muted}">${i.description}</p></div>`).join('');
+        return `<section style="padding:60px 24px;background:${colors.bg};text-align:center">
+${c.title?`<h2 style="font-size:1.8rem;color:${colors.text};margin-bottom:32px">${c.title}</h2>`:''}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;max-width:1000px;margin:0 auto">${items}</div></section>`;
+      }
+      case 'specs': {
+        const c = s.content;
+        const items = (c.items||[]).map(i => `<div style="padding:20px;background:${colors.surface};border-radius:4px;border-left:3px solid ${colors.accent};text-align:left">
+<div style="color:${colors.muted};font-size:0.75rem;text-transform:uppercase;margin-bottom:4px">${i.label}</div>
+<div style="color:${colors.text};font-weight:600">${i.value}</div></div>`).join('');
+        return `<section style="padding:60px 24px;background:${colors.surface};text-align:center">
+${c.title?`<h2 style="font-size:1.8rem;color:${colors.text};margin-bottom:32px">${c.title}</h2>`:''}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;max-width:1000px;margin:0 auto">${items}</div></section>`;
+      }
+      case 'faq': {
+        const c = s.content;
+        const items = (c.items||[]).map((q,i) => `<details ${i===0?'open':''} style="margin-bottom:8px;padding:16px;background:${colors.surface};border-radius:4px;cursor:pointer">
+<summary style="color:${colors.text};font-weight:600">${q.question}</summary>
+<p style="color:${colors.muted};margin-top:12px">${q.answer}</p></details>`).join('');
+        return `<section style="padding:60px 24px;background:${colors.bg}"><div style="max-width:700px;margin:0 auto">
+${c.title?`<h2 style="font-size:1.8rem;color:${colors.text};text-align:center;margin-bottom:32px">${c.title}</h2>`:''}
+${items}</div></section>`;
+      }
+      case 'contact_form': {
+        const c = s.content;
+        const fields = (c.fields||[]).map(f => `<div style="margin-bottom:12px">
+<label style="display:block;color:${colors.text};margin-bottom:4px;font-size:0.85rem">${f.label}${f.required?' *':''}</label>
+<input type="${f.type==='textarea'?'text':f.type}" style="width:100%;padding:10px;background:${colors.surface};border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:${colors.text}" ${f.required?'required':''}>
+</div>`).join('');
+        return `<section style="padding:60px 24px;background:${colors.surface}">
+${c.title?`<h2 style="font-size:1.8rem;color:${colors.text};text-align:center;margin-bottom:24px">${c.title}</h2>`:''}
+<form style="max-width:500px;margin:0 auto">${fields}
+<button style="width:100%;padding:12px;background:${colors.accent};color:${colors.bg};border:none;border-radius:4px;font-weight:600;cursor:pointer">Submit</button></form></section>`;
+      }
+      case 'pricing': {
+        const c = s.content;
+        const items = (c.items||[]).map(p => `<div style="padding:32px 20px;background:${p.highlighted?colors.accent:colors.surface};color:${p.highlighted?colors.bg:colors.text};border-radius:8px">
+<h3 style="font-size:1.2rem;margin-bottom:8px">${p.name}</h3>
+<div style="font-size:2rem;font-weight:700;margin-bottom:16px">${p.price}</div>
+${(p.features||[]).map(f => `<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.08)">✓ ${f}</div>`).join('')}
+</div>`).join('');
+        return `<section style="padding:60px 24px;background:${colors.bg};text-align:center">
+${c.title?`<h2 style="font-size:1.8rem;color:${colors.text};margin-bottom:32px">${c.title}</h2>`:''}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:900px;margin:0 auto">${items}</div></section>`;
+      }
+      case 'gallery': {
+        const c = s.content;
+        const images = (c.images||[]).map(img => `<div style="border-radius:8px;overflow:hidden;background:${colors.surface}">
+<div style="width:100%;height:200px;background:${colors.surface};display:flex;align-items:center;justify-content:center;color:${colors.muted};font-size:3rem">🖼</div>
+${img.caption?`<p style="padding:12px;color:${colors.muted};font-size:0.85rem">${img.caption}</p>`:''}
+</div>`).join('');
+        return `<section style="padding:60px 24px;background:${colors.surface};text-align:center">
+${c.title?`<h2 style="font-size:1.8rem;color:${colors.text};margin-bottom:32px">${c.title}</h2>`:''}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:1000px;margin:0 auto">${images}</div></section>`;
+      }
+      case 'cta': {
+        const c = s.content;
+        return `<section style="padding:60px 24px;background:${colors.accent};text-align:center">
+${c.headline?`<h2 style="font-size:1.8rem;color:${colors.bg};margin-bottom:12px">${c.headline}</h2>`:''}
+${c.body?`<p style="color:${colors.bg};opacity:0.85;margin-bottom:24px">${c.body}</p>`:''}
+<a href="#" style="display:inline-block;padding:12px 32px;background:${colors.bg};color:${colors.accent};border-radius:6px;text-decoration:none;font-weight:600">${c.buttonText||'Get Started'}</a></section>`;
+      }
+      case 'testimonials': {
+        const c = s.content;
+        const items = (c.items||[]).map(t => `<div style="padding:24px;background:${colors.surface};border-radius:8px;border:1px solid rgba(255,255,255,0.06)">
+<p style="color:${colors.text};font-style:italic;margin-bottom:12px">"${t.quote}"</p>
+<div style="color:${colors.accent};font-weight:600">${t.name}</div>
+${t.role?`<div style="color:${colors.muted};font-size:0.85rem">${t.role}</div>`:''}</div>`).join('');
+        return `<section style="padding:60px 24px;background:${colors.bg};text-align:center">
+${c.title?`<h2 style="font-size:1.8rem;color:${colors.text};margin-bottom:32px">${c.title}</h2>`:''}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:1000px;margin:0 auto">${items}</div></section>`;
+      }
+      case 'trust_badges': {
+        const c = s.content;
+        const badges = (c.badges||[]).map(b => `<span style="padding:6px 16px;background:rgba(255,255,255,0.04);border:1px solid ${colors.accent}33;border-radius:4px;color:${colors.accent};font-weight:600;font-size:0.85rem">${b.icon||''} ${b.name}</span>`).join('');
+        return `<section style="padding:40px 24px;background:${colors.bg};text-align:center">
+${badges}</section>`;
+      }
+      case 'footer': {
+        const c = s.content;
+        return `<footer style="padding:40px 24px;background:${colors.surface};text-align:center">
+${c.brandName?`<div style="color:${colors.text};font-weight:700;margin-bottom:12px">${c.brandName}</div>`:''}
+${c.copyright?`<div style="color:${colors.muted};font-size:0.8rem">${c.copyright}</div>`:''}
+</footer>`;
+      }
+      default: return '';
+    }
+  }).join('\n');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${ir.intent?.summary||'Preview'}</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:${colors.bg};color:${colors.text};-webkit-font-smoothing:antialiased}</style></head>
+<body>${html}</body></html>`;
+}
+
+function getColors(cs) {
+  const presets = {
+    'dark-gold':{bg:'#08080f',surface:'#12121a',text:'#e8e8e8',accent:'#c9a84c',muted:'#888'},
+    'dark-blue':{bg:'#0a0e1a',surface:'#111827',text:'#e2e8f0',accent:'#3b82f6',muted:'#94a3b8'},
+    'light-blue':{bg:'#ffffff',surface:'#f8fafc',text:'#1e293b',accent:'#2563eb',muted:'#64748b'},
+    'minimal-white':{bg:'#ffffff',surface:'#f5f5f5',text:'#171717',accent:'#404040',muted:'#737373'},
+  };
+  for (const [k,v] of Object.entries(presets)) { if (cs.startsWith(k)) return v; }
+  return presets['dark-gold'];
+}
+
+// ─── Render ───────────────────────────────────────────────
+function updatePreview() {
+  try {
+    const ir = JSON.parse(editor.value);
+    const html = renderPreview(ir);
+    const blob = new Blob([html], {type:'text/html'});
+    preview.src = URL.createObjectURL(blob);
+    errorBar.classList.remove('show');
+    status.textContent = `${ir.layout?.length||0} sections · ${ir.design?.colorScheme||'?'}`;
+  } catch(e) {
+    errorBar.textContent = '❌ ' + e.message;
+    errorBar.classList.add('show');
+    status.textContent = 'invalid JSON';
+  }
+}
+
+function debouncedUpdate() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(updatePreview, 300);
+}
+
+// ─── Actions ──────────────────────────────────────────────
+function loadTemplate(name) {
+  const t = TEMPLATES[name];
+  if (t) { editor.value = JSON.stringify(t, null, 2); updatePreview(); }
+}
+
+async function loadFromClipboard() {
+  try { editor.value = await navigator.clipboard.readText(); updatePreview(); }
+  catch(e) { alert('Cannot read clipboard. Paste manually (Ctrl+V).'); }
+}
+
+function copyIR() {
+  navigator.clipboard.writeText(editor.value).then(() => status.textContent = 'copied!');
+}
+
+function downloadHTML() {
+  try {
+    const ir = JSON.parse(editor.value);
+    const html = renderPreview(ir);
+    const blob = new Blob([html], {type:'text/html'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'page.html'; a.click();
+  } catch(e) { alert('Invalid IR JSON'); }
+}
+
+// ─── Divider Drag ─────────────────────────────────────────
+const divider = document.getElementById('divider');
+let dragging = false;
+divider.addEventListener('mousedown', () => { dragging = true; document.body.style.cursor='col-resize'; });
+document.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const main = document.querySelector('main');
+  const rect = main.getBoundingClientRect();
+  const pct = ((e.clientX - rect.left) / rect.width) * 100;
+  document.querySelectorAll('.panel')[0].style.flex = `0 0 ${Math.max(20, Math.min(80, pct))}%`;
+});
+document.addEventListener('mouseup', () => { dragging = false; document.body.style.cursor=''; });
+
+// ─── Init ─────────────────────────────────────────────────
+templateSelect.addEventListener('change', (e) => { if(e.target.value) loadTemplate(e.target.value); });
+editor.addEventListener('input', debouncedUpdate);
+editor.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') { e.preventDefault(); const s=editor.selectionStart; editor.value=editor.value.slice(0,s)+'  '+editor.value.slice(s); editor.selectionStart=editor.selectionEnd=s+2; }
+});
+
+// Load default template
+loadTemplate('drwarm');
+</script>
+</body>
+</html>
