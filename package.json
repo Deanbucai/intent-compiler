@@ -30,7 +30,7 @@
   "author": "Intent Compiler Contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/intent-compiler/intent-compiler"
+    "url": "https://github.com/Deanbucai/intent-compiler"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",

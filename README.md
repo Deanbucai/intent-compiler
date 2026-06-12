@@ -4,7 +4,7 @@
 > 把模糊的自然语言，编译成 AI Agent 能精确执行的结构化意图。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/intent-compiler/intent-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/intent-compiler/intent-compiler/actions)
+[![CI](https://github.com/Deanbucai/intent-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/intent-compiler/intent-compiler/actions)
 [![tested with tsx](https://img.shields.io/badge/tested%20with-tsx-blue)](https://github.com/privatenumber/tsx)
 
 AI coding tools are great at turning prompts into code. But **turning ideas into good prompts is still 100% manual.** Intent Compiler bridges that gap — it compiles free-form natural language into a structured **Intent IR** (Intermediate Representation) that any agent, renderer, or tool can consume.
@@ -64,7 +64,7 @@ Natural Lang → Intent IR → Any Output  (intent compiler)
 
 ```bash
 # 1. 安装
-git clone https://github.com/intent-compiler/intent-compiler.git
+git clone https://github.com/Deanbucai/intent-compiler.git
 cd intent-compiler && npm install
 
 # 2. 设 API Key (DeepSeek — 国内可用)
