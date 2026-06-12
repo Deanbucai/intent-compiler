@@ -45,19 +45,6 @@ Source Code → AST → Machine Code     (traditional compiler)
 Natural Lang → Intent IR → Any Output  (intent compiler)
 ```
 
-### vs. Existing Projects
-
-| Project | Take NL? | Domain | IR Open? | Renderer Pluggable? |
-|---------|----------|--------|----------|---------------------|
-| **Intent Compiler** | ✅ Free-form | Agnostic | ✅ | ✅ |
-| English Compiler | ⚠️ Pseudocode only | Algorithms | ✅ | ❌ |
-| Google A2UI | ❌ (agent→UI) | UI only | ✅ | ✅ |
-| AIRL | ❌ | Code | ✅ | — |
-| OpenEngine | ✅ | Code | ❌ | ❌ |
-| MadeBee | ✅ | React UI | ✅ | ❌ |
-
-**Intent Compiler is the only one that takes free-form NL, is domain-agnostic, and has a pluggable renderer architecture.**
-
 ## Quick Start
 
 ### 中文用户 · 一行命令
