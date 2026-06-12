@@ -178,3 +178,20 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 - MCP setup instructions
 - CI badge + test badge
 
+---
+
+## 2026-06-12 — v0.0.8 (IR Memory — Self-Improving Compiler)
+
+### IR Memory Store
+- SQLite-based (node:sqlite, zero external deps) `.intent-compiler/memory.db`
+- FTS5 full-text search + industry matching + section pattern extraction
+- Every compile() automatically recorded (unless locked fields mode)
+
+### Few-Shot Learning
+- Before compilation: search memory for similar past IRs
+- Inject top matches as few-shot examples into compiler prompt
+- Verified: 3 factory compilations → consistent hero,features,specs,faq,contact_form pattern
+
+### CLI Commands
+- `intentc memory stats|search|patterns|clear`
+

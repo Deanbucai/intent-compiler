@@ -2,6 +2,7 @@ import Ajv from 'ajv';
 import { callAnthropic, type ProviderOptions } from './providers/anthropic';
 import { callOpenAI } from './providers/openai';
 import { INTENT_IR_SCHEMA, type IntentIR } from './schema';
+import type { IRMemory, MemoryEntry } from './ir-memory';
 
 const ajv = new Ajv({ allErrors: true });
 const validateIR = ajv.compile(INTENT_IR_SCHEMA);
@@ -23,6 +24,8 @@ export interface CompileOptions {
   lockFields?: Array<'intent' | 'design' | 'layout'>;
   /** Required when lockFields is set — the existing IR to preserve from */
   existingIR?: IntentIR;
+  /** IRMemory instance for few-shot pattern injection */
+  memory?: IRMemory;
 }
 
 export interface CompileResult {
@@ -40,8 +43,23 @@ export interface CompileResult {
  * System prompt that turns the LLM into a compiler frontend.
  * Includes the full JSON Schema so the LLM knows the exact contract.
  */
-function buildSystemPrompt(lockedFields?: string[], existingIR?: Partial<IntentIR>): string {
+function buildSystemPrompt(lockedFields?: string[], existingIR?: Partial<IntentIR>, fewShots?: MemoryEntry[]): string {
   const schemaStr = JSON.stringify(INTENT_IR_SCHEMA, null, 2);
+
+  let fewShotBlock = '';
+  if (fewShots && fewShots.length > 0) {
+    const examples = fewShots.map((m, i) => {
+      const ir = JSON.parse(m.ir_json);
+      return `Example ${i + 1} (${m.industry || 'unknown industry'}, ${m.section_types}):\nInput: ${m.nl_input.slice(0, 200)}\nIR: ${JSON.stringify(ir, null, 2).slice(0, 800)}`;
+    }).join('\n\n');
+    fewShotBlock = `
+## FEW-SHOT EXAMPLES — Reference These Patterns
+Below are successful compilations for similar requests. Use them as reference for section structure, industry conventions, and design choices.
+
+${examples}
+
+`;
+  }
 
   let lockInstructions = '';
   if (lockedFields && lockedFields.length > 0 && existingIR) {
@@ -181,7 +199,17 @@ export async function compile(
   input: string,
   opts: CompileOptions = {}
 ): Promise<CompileResult> {
-  const systemPrompt = buildSystemPrompt(opts.lockFields, opts.existingIR);
+  // Fetch few-shot examples from memory if available
+  let fewShots: MemoryEntry[] | undefined;
+  let industry: string | undefined;
+  if (opts.memory) {
+    // Try to extract industry from input
+    const industryMatch = input.match(/(?:行业|产业|领域|工厂|店|品牌|公司|企业|SaaS|B2B|电商|制造|餐饮|教育|医疗|金融|房地产)/);
+    industry = industryMatch ? industryMatch[0] : undefined;
+    fewShots = opts.memory.getFewShotExamples(input, industry, 2);
+  }
+
+  const systemPrompt = buildSystemPrompt(opts.lockFields, opts.existingIR, fewShots);
   const maxRetries = opts.maxRetries ?? 2;
 
   let lastError: Error | null = null;
@@ -226,25 +254,34 @@ export async function compile(
     }
 
     // Post-compilation: force-restore locked fields from existing IR
+    const ir = parsed as IntentIR;
     if (opts.lockFields && opts.lockFields.length > 0 && opts.existingIR) {
-      const ir = parsed as IntentIR;
       for (const field of opts.lockFields) {
         (ir as unknown as Record<string, unknown>)[field] = (opts.existingIR as unknown as Record<string, unknown>)[field];
       }
-      return {
-        ir,
-        raw: lastRaw,
-        usage: result.usage,
-        model: result.model,
-      };
     }
 
-    return {
-      ir: parsed as IntentIR,
-      raw: lastRaw,
-      usage: result.usage,
-      model: result.model,
-    };
+    // Record to memory for future few-shot learning
+    if (opts.memory && !opts.lockFields) {
+      try {
+        opts.memory.record({
+          nl_input: input.slice(0, 500),
+          ir_json: JSON.stringify(ir),
+          domain: ir.intent.domain,
+          industry: industry || '',
+          section_types: ir.layout.map((s) => s.type),
+          color_scheme: ir.design.colorScheme,
+          tone: ir.design.tone,
+          token_input: result.usage?.input || 0,
+          token_output: result.usage?.output || 0,
+          model: result.model,
+        });
+      } catch {
+        // Memory recording failure shouldn't break compilation
+      }
+    }
+
+    return { ir, raw: lastRaw, usage: result.usage, model: result.model };
   }
 
   throw lastError ?? new Error('Compilation failed');

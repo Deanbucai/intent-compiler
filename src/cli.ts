@@ -183,6 +183,69 @@ async function runRendererCmd(args: string[]) {
   console.error('       intentc renderer add <directory>');
 }
 
+async function runMemoryCmd(args: string[]) {
+  const { IRMemory } = await import('./ir-memory');
+  const memory = new IRMemory();
+
+  const cmd = args[0];
+
+  if (cmd === 'stats') {
+    const stats = memory.getStats();
+    console.log(`📊 IR Memory Stats`);
+    console.log(`   Total entries: ${stats.total}`);
+    if (stats.total === 0) { memory.close(); return; }
+    console.log(`   By domain:`, Object.entries(stats.by_domain).map(([k, v]) => `${k}:${v}`).join(', '));
+    console.log(`   By industry:`, Object.entries(stats.by_industry).slice(0, 8).map(([k, v]) => `${k}:${v}`).join(', '));
+    console.log(`   Top patterns:`);
+    for (const p of stats.most_common_sections.slice(0, 5)) {
+      console.log(`     ${p.types.padEnd(40)} x${p.count}`);
+    }
+    if (stats.recent.length > 0) {
+      console.log(`   Recent:`);
+      for (const r of stats.recent.slice(0, 3)) {
+        console.log(`     [${r.industry || '?'}] ${r.nl_input.slice(0, 60)}...`);
+      }
+    }
+    memory.close();
+    return;
+  }
+
+  if (cmd === 'search' && args[1]) {
+    const results = memory.search(args[1], 5);
+    console.log(`${results.length} matches for "${args[1]}":`);
+    for (const r of results) {
+      console.log(`  [${r.industry || '?'}] ${r.section_types} — ${r.nl_input.slice(0, 80)}`);
+    }
+    memory.close();
+    return;
+  }
+
+  if (cmd === 'patterns' && args[1]) {
+    const patterns = memory.getPatternsForIndustry(args[1]);
+    console.log(`Patterns for "${args[1]}":`);
+    for (const p of patterns) {
+      console.log(`  ${p.types.join(' → ')} (x${p.count})`);
+    }
+    memory.close();
+    return;
+  }
+
+  if (cmd === 'clear') {
+    memory.close();
+    const fs = await import('fs');
+    const path = '.intent-compiler/memory.db';
+    if (fs.existsSync(path)) { fs.unlinkSync(path); console.log('Memory cleared.'); }
+    else { console.log('No memory file found.'); }
+    return;
+  }
+
+  console.error('Usage: intentc memory stats');
+  console.error('       intentc memory search <query>');
+  console.error('       intentc memory patterns <industry>');
+  console.error('       intentc memory clear');
+  memory.close();
+}
+
 async function runDiff(args: string[]) {
   if (args.length < 2) {
     console.error('Usage: intentc diff <file-a.json> <file-b.json>');
@@ -270,6 +333,12 @@ async function main() {
     return;
   }
 
+  // Handle 'memory' subcommand
+  if (args[0] === 'memory') {
+    await runMemoryCmd(args.slice(1));
+    return;
+  }
+
   const opts = parseArgs(args);
 
   // Read input: from --input file, from stdin, or from positional arg
@@ -297,9 +366,13 @@ async function main() {
 
   console.error(`⏳ Compiling: "${input.slice(0, 80)}${input.length > 80 ? '...' : ''}"`);
 
+  const { IRMemory } = await import('./ir-memory');
+  const memory = new IRMemory();
+
   const result = await compile(input, {
     provider: opts.provider,
     providerOpts: opts.model ? { model: opts.model } : undefined,
+    memory,
   });
 
   console.error(`✅ Compiled (${result.model}, ${result.usage?.input}+${result.usage?.output} tokens)`);
