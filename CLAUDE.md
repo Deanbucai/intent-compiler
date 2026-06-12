@@ -25,7 +25,8 @@ Before generating ANY web page, slide deck, document, or UI code, you MUST:
 | "做一个网站/页面/官网" | `compile_intent(domain="web_page")` | `render_format` or write code from IR |
 | "做个PPT/幻灯片/演示" | `compile_intent(domain="slide_deck")` | `render_format(format="slide")` |
 | "写个文档/手册/报告" | `compile_intent(domain="document")` | `render_format(format="document")` |
-| "翻译成英文/俄文" | `translate_ir` | `render_format` with translated IR |
+| "翻译成英文/俄文" | `translate_ir(target_lang="en-US" or "ru-RU")` | `render_format` with translated IR |
+| "翻译成日文" | **不支持** — 仅支持 zh-CN / en-US / ru-RU | — |
 | "对比两个版本" | `diff_ir` | — |
 | "有哪些模板" | `list_templates` | — |
 
