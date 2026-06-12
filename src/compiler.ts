@@ -70,17 +70,15 @@ ${lockInstructions}
    - No typography? Default to "modern-sans".
    - No language specified? Default to "zh-CN" if input is Chinese, "en-US" otherwise.
 4. Map the user's described sections to the correct section types:
-   - "头部/主页大图/首屏" → hero
-   - "特点/优势/为什么选我们" → features
-   - "规格/参数/技术指标" → specs
-   - "常见问题/问答" → faq
-   - "联系我们/表单/询价" → contact_form
-   - "认证/资质/证书/合作方" → trust_badges
-   - "价格/套餐/定价" → pricing
-   - "图片展示/案例/作品集" → gallery
-   - "行动号召/立即加入/CTA" → cta
-   - "客户评价/用户反馈/案例" → testimonials
-   - "底部/版权/链接" → footer
+   - For web_page (landing/saas/portfolio):
+     "头部"→hero, "特点"→features, "规格"→specs, "问答"→faq, "联系"→contact_form,
+     "认证"→trust_badges, "价格"→pricing, "图集"→gallery, "CTA"→cta, "评价"→testimonials, "底部"→footer
+   - For slide_deck (presentation/pitch deck):
+     "封面/标题页"→title_slide, "内容页/正文"→content_slide, "要点/列表"→bullets_slide,
+     "引用/金句"→quote_slide, "图片页"→image_slide, "结束页/谢谢"→ending_slide
+   - For document (report/manual/brochure):
+     "文档标题"→document_title, "章节"→chapter, "正文"→body, "表格"→doc_table,
+     "图片"→doc_image, "目录"→toc
    - Anything that doesn't fit → custom
 5. Assign priorities based on the order the user mentions sections (10, 20, 30...).
 6. Keep content concise — headlines under 50 chars, descriptions under 200 chars.

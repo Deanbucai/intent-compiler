@@ -23,8 +23,8 @@ export interface IntentIR {
 }
 
 export interface IntentMeta {
-  /** Domain — v0.1.0 only supports 'web_page' */
-  domain: 'web_page';
+  /** Domain — determines which renderers and section types are available */
+  domain: 'web_page' | 'slide_deck' | 'document';
   /** Page type */
   type: 'landing' | 'dashboard' | 'blog' | 'form' | 'portfolio';
   /** Industry context, e.g. 'manufacturing', 'saas', 'healthcare' */
@@ -59,6 +59,7 @@ export interface Section {
 
 /** Supported section types in v0.1.0 */
 export type SectionType =
+  // web_page sections
   | 'hero'
   | 'features'
   | 'specs'
@@ -70,6 +71,21 @@ export type SectionType =
   | 'cta'
   | 'testimonials'
   | 'footer'
+  // slide_deck sections
+  | 'title_slide'
+  | 'content_slide'
+  | 'bullets_slide'
+  | 'quote_slide'
+  | 'image_slide'
+  | 'ending_slide'
+  // document sections
+  | 'document_title'
+  | 'chapter'
+  | 'body'
+  | 'doc_table'
+  | 'doc_image'
+  | 'toc'
+  // catch-all
   | 'custom';
 
 /** Content shapes by section type */
@@ -177,13 +193,89 @@ export interface TestimonialsContent {
   }>;
 }
 
+// ─── Slide Deck Content Types ─────────────────────────────────
+
+export interface TitleSlideContent {
+  title: string;
+  subtitle?: string;
+  presenter?: string;
+  date?: string;
+}
+
+export interface ContentSlideContent {
+  title: string;
+  body: string;
+  /** Optional image URL */
+  image?: string;
+}
+
+export interface BulletsSlideContent {
+  title: string;
+  bullets: string[];
+}
+
+export interface QuoteSlideContent {
+  quote: string;
+  author?: string;
+  context?: string;
+}
+
+export interface ImageSlideContent {
+  title?: string;
+  image: string;
+  caption?: string;
+}
+
+export interface EndingSlideContent {
+  title?: string;
+  message?: string;
+  contact?: string;
+}
+
+// ─── Document Content Types ─────────────────────────────────
+
+export interface DocTitleContent {
+  title: string;
+  subtitle?: string;
+  author?: string;
+  date?: string;
+}
+
+export interface ChapterContent {
+  number?: number;
+  title: string;
+}
+
+export interface BodyContent {
+  text: string;
+  /** Optional inline formatting hints */
+  format?: 'plain' | 'markdown';
+}
+
+export interface DocTableContent {
+  title?: string;
+  headers: string[];
+  rows: string[][];
+}
+
+export interface DocImageContent {
+  src: string;
+  alt: string;
+  caption?: string;
+}
+
+export interface TocContent {
+  title?: string;
+}
+
 export interface CustomContent {
   component: string;
   props?: Record<string, unknown>;
 }
 
-/** Union of all section content types */
+/** Union of all section content types across all domains */
 export type SectionContent =
+  // web_page
   | HeroContent
   | FeaturesContent
   | SpecsContent
@@ -195,6 +287,21 @@ export type SectionContent =
   | CtaContent
   | TestimonialsContent
   | FooterContent
+  // slide_deck
+  | TitleSlideContent
+  | ContentSlideContent
+  | BulletsSlideContent
+  | QuoteSlideContent
+  | ImageSlideContent
+  | EndingSlideContent
+  // document
+  | DocTitleContent
+  | ChapterContent
+  | BodyContent
+  | DocTableContent
+  | DocImageContent
+  | TocContent
+  // catch-all
   | CustomContent;
 
 export interface Constraints {
@@ -236,13 +343,12 @@ export const INTENT_IR_SCHEMA = {
       properties: {
         domain: {
           type: 'string',
-          const: 'web_page',
+          enum: ['web_page', 'slide_deck', 'document'],
           description: 'Intent domain',
         },
         type: {
           type: 'string',
-          enum: ['landing', 'dashboard', 'blog', 'form', 'portfolio'],
-          description: 'Page type',
+          description: 'Output type — varies by domain (e.g. landing/presentation/report)',
         },
         industry: {
           type: 'string',
@@ -296,17 +402,10 @@ export const INTENT_IR_SCHEMA = {
           type: {
             type: 'string',
             enum: [
-              'hero',
-              'features',
-              'specs',
-              'faq',
-              'contact_form',
-              'trust_badges',
-              'pricing',
-              'gallery',
-              'cta',
-              'testimonials',
-              'footer',
+              'hero','features','specs','faq','contact_form','trust_badges',
+              'pricing','gallery','cta','testimonials','footer',
+              'title_slide','content_slide','bullets_slide','quote_slide','image_slide','ending_slide',
+              'document_title','chapter','body','doc_table','doc_image','toc',
               'custom',
             ],
             description: 'Section type',

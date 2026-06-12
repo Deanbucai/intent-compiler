@@ -14,6 +14,7 @@ export type { CompileOptions, CompileResult, Provider } from './compiler';
 export { renderHTML } from './renderers/html';
 export { renderReact } from './renderers/react';
 export { renderMarkdown } from './renderers/markdown';
+export { renderSlideDeck } from './renderers/slide';
 export { INTENT_IR_SCHEMA } from './schema';
 export type {
   IntentIR,

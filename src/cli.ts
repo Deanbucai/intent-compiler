@@ -14,11 +14,12 @@ import { compile } from './compiler';
 import { renderHTML } from './renderers/html';
 import { renderReact } from './renderers/react';
 import { renderMarkdown } from './renderers/markdown';
+import { renderSlideDeck } from './renderers/slide';
 
 interface CLIOptions {
   input?: string;
   output?: string;
-  render?: 'html' | 'react' | 'markdown' | 'json';
+  render?: 'html' | 'react' | 'markdown' | 'slide' | 'json';
   provider?: 'anthropic' | 'openai';
   model?: string;
 }
@@ -257,6 +258,8 @@ async function main() {
     output = renderReact(result.ir);
   } else if (opts.render === 'markdown') {
     output = renderMarkdown(result.ir);
+  } else if (opts.render === 'slide') {
+    output = renderSlideDeck(result.ir);
   } else {
     output = JSON.stringify(result.ir, null, 2);
   }
