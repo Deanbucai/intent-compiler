@@ -1,0 +1,11 @@
+src/__tests__/
+test-output/
+examples/renderers/
+examples/drwarm.ts
+DEVLOG.md
+ROADMAP.md
+MCP_SETUP.md
+CONTRIBUTING.md
+.github/
+.mcp.json
+*.png

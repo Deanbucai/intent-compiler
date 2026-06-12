@@ -12,7 +12,8 @@
     "build": "tsc",
     "dev": "tsx src/cli.ts",
     "compile": "tsx src/cli.ts",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test src/__tests__/*.test.ts",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "ai",

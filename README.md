@@ -1,9 +1,11 @@
 # Intent Compiler
 
 > **The LLVM for vibe coding.** Natural Language → Structured Intent IR → Any Output.
+> 把模糊的自然语言，编译成 AI Agent 能精确执行的结构化意图。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![npm version](https://img.shields.io/npm/v/intent-compiler)](https://www.npmjs.com/package/intent-compiler)
+[![CI](https://github.com/intent-compiler/intent-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/intent-compiler/intent-compiler/actions)
+[![tested with tsx](https://img.shields.io/badge/tested%20with-tsx-blue)](https://github.com/privatenumber/tsx)
 
 AI coding tools are great at turning prompts into code. But **turning ideas into good prompts is still 100% manual.** Intent Compiler bridges that gap — it compiles free-form natural language into a structured **Intent IR** (Intermediate Representation) that any agent, renderer, or tool can consume.
 
@@ -58,6 +60,21 @@ Natural Lang → Intent IR → Any Output  (intent compiler)
 
 ## Quick Start
 
+### 中文用户 · 一行命令
+
+```bash
+# 1. 安装
+git clone https://github.com/intent-compiler/intent-compiler.git
+cd intent-compiler && npm install
+
+# 2. 设 API Key (DeepSeek — 国内可用)
+export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+export ANTHROPIC_AUTH_TOKEN="sk-你的key"
+
+# 3. 试试
+echo "做一个咖啡店官网，暖棕色调，hero+3个特点+价格表+联系表单" | npx tsx src/cli.ts --render html --output coffee.html
+```
+
 ### Install
 
 ```bash
@@ -73,28 +90,50 @@ echo "Build a SaaS landing page with hero and 3 features" | npx intentc
 # Compile and render to HTML
 echo "做一个牙刷工厂B2B官网，深色金色调，hero+技术规格+FAQ+联系表单" \
   | npx intentc --render html --output page.html
+
+# Translate to English / Russian
+intentc translate page-ir.json en-US
+intentc translate page-ir.json ru-RU
+
+# Diff two versions
+intentc diff v1.json v2.json
+
+# Launch visual editor
+intentc play
+
+# List templates
+intentc template list
 ```
+
+### MCP Server (Agent Integration)
+
+```bash
+# Claude Code
+claude mcp add --transport stdio intent-compiler -- npx tsx src/mcp-server.ts
+
+# Cursor — add to .cursor/mcp.json:
+# {"mcpServers":{"intent-compiler":{"type":"stdio","command":"npx","args":["tsx","src/mcp-server.ts"]}}}
+```
+
+Then in any agent session: `compile_intent`, `render_format`, `translate_ir`, `diff_ir`, `list_renderers`.
 
 ### API
 
 ```ts
 import { compile, renderHTML } from 'intent-compiler';
 
-// Compile natural language to structured Intent IR
 const { ir } = await compile(
   'A dark-themed landing page for a toothbrush factory. Hero + specs + FAQ + contact form.'
 );
 
 console.log(ir.design.colorScheme);      // "dark-gold"
 console.log(ir.layout.length);           // 4
-
-// Render IR to a self-contained HTML page
 const html = renderHTML(ir);
 ```
 
 ### Environment
 
-Set your API key — supports Anthropic or OpenAI-compatible providers:
+Supports Anthropic or OpenAI-compatible providers:
 
 ```bash
 export ANTHROPIC_API_KEY="sk-..."    # Claude

@@ -153,3 +153,28 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 - `list_renderers` MCP tool added
 - `render_format` now uses registry (not hardcoded imports)
 
+---
+
+## 2026-06-12 — Open Source Prep (Pre-GitHub)
+
+### CI/CD
+- `.github/workflows/ci.yml` — GitHub Actions: npm ci → tsc → test → build
+- Ubuntu latest, Node 22, cache enabled
+
+### Tests
+- 15 unit tests, 2 suites: schema (7 tests) + registry (8 tests)
+- Zero API key needed — all tests run offline
+- `npm test` via `tsx --test`
+
+### CONTRIBUTING.md
+- Architecture overview, good first issues, development rules, PR guidelines
+
+### npm Prep
+- `.npmignore` — exclude tests, dev files, examples
+- `prepublishOnly` hook — auto-build before publish
+
+### README
+- Chinese quick-start section for domestic users
+- MCP setup instructions
+- CI badge + test badge
+
