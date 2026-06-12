@@ -57,3 +57,29 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 - 检测：意图变更、设计变更、section 增删
 - 演示"IR 可版本化"——Agent 对话做不到的事
 
+---
+
+## 2026-06-12 — v0.0.3 (IR Playground + Partial Recompilation + Multi-Language)
+
+### IR Playground
+- 独立 HTML 页面 (`src/playground/index.html`)
+- JSON 编辑器（左）+ 实时预览（右），12 section 类型
+- 4 个内置模板：landing/saas/DR.Warm/portfolio
+- 拖拽分隔条、复制粘贴、下载 HTML
+- `intentc play` 一键启动
+
+### 部分重编译
+- `compile(input, { lockFields: ['design'], existingIR })` — 锁定字段后只编译目标
+- Prompt 层 + 编译后强制恢复，双重保证
+- 验证：lock design → 加 gallery → design 零变化
+
+### 多语言翻译
+- `intentc translate ir.json zh-CN|en-US|ru-RU`
+- 锁定 design + intent，翻译 layout 文本内容
+- Section 结构验证，结构变化时自动恢复
+- 实测：中文 "甜蜜时刻，从一口开始" → 英文 "Sweet Moments, Start with a Bite"
+
+### 模板 CLI
+- `intentc template list` — 4 个模板
+- 模板已内嵌到 playground
+
