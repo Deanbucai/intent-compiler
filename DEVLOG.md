@@ -30,3 +30,25 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 ---
 
 ## 2026-06-12 — v0.2.0 (Multi-Renderer)
+
+### React Renderer
+- 12 种 section type 渲染器（含新增的 pricing/gallery/cta/testimonials）
+- 完整 .tsx 输出：imports + typed components + useState hooks + 默认导出
+- 样式对象模式（CSS-in-JS），零外部依赖
+- 模板字面量嵌套冲突修复（{plan.xxx} → 预处理 cards 字符串）
+
+### Markdown Renderer
+- 12 种 section type → 格式化 Markdown
+- 自动生成目录（Contents）
+- 元数据头部
+- 表格（specs）、引用块（testimonials）、图片（gallery）
+
+### Schema 扩展
+- 新增 section types: pricing, gallery, cta, testimonials
+- 从 8 种扩展到 12 种
+- Compiler prompt 同步更新 section 映射规则
+
+### 验证
+- 同一份 IR (gym-ir.json) → HTML (7284B) + React (8088B) + Markdown (531B) 三路输出
+- 内容一致性确认（5 sections 完全对应）
+

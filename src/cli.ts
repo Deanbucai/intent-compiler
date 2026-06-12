@@ -12,11 +12,12 @@
 import { compile } from './compiler';
 import { renderHTML } from './renderers/html';
 import { renderReact } from './renderers/react';
+import { renderMarkdown } from './renderers/markdown';
 
 interface CLIOptions {
   input?: string;
   output?: string;
-  render?: 'html' | 'react' | 'json';
+  render?: 'html' | 'react' | 'markdown' | 'json';
   provider?: 'anthropic' | 'openai';
   model?: string;
 }
@@ -63,6 +64,8 @@ async function main() {
     output = renderHTML(result.ir);
   } else if (opts.render === 'react') {
     output = renderReact(result.ir);
+  } else if (opts.render === 'markdown') {
+    output = renderMarkdown(result.ir);
   } else {
     output = JSON.stringify(result.ir, null, 2);
   }
