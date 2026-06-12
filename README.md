@@ -47,87 +47,87 @@ Natural Lang → Intent IR → Any Output  (intent compiler)
 
 ## Quick Start
 
-### 中文用户 · 一行命令
+### 第一步：安装 + 初始化项目
 
 ```bash
-# 1. 安装
+# 安装
 git clone https://github.com/Deanbucai/intent-compiler.git
 cd intent-compiler && npm install
 
-# 2. 设 API Key (DeepSeek — 国内可用)
+# 设 API Key (DeepSeek — 国内可用)
 export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 export ANTHROPIC_AUTH_TOKEN="sk-你的key"
 
-# 3. 试试
-echo "做一个咖啡店官网，暖棕色调，hero+3个特点+价格表+联系表单" | npx tsx src/cli.ts --render html --output coffee.html
+# 初始化项目（交互式，4 个问题）
+npx tsx src/cli.ts init my-site
 ```
 
-### Install
+会问你：做什么类型的项目？什么行业？什么语言？什么配色风格？然后自动生成：
 
-```bash
-npm install intent-compiler
+```
+my-site/
+├── ir.json        ← 项目的结构化意图，可以直接编辑
+├── CLAUDE.md      ← Agent 规则，Agent 打开这个目录自动用 IR
+└── .env.example   ← API Key 配置模板
 ```
 
-### CLI
+### 第二步：编译 → 出 HTML
 
 ```bash
-# Compile to IR JSON
-echo "Build a SaaS landing page with hero and 3 features" | npx intentc
-
-# Compile and render to HTML
-echo "做一个牙刷工厂B2B官网，深色金色调，hero+技术规格+FAQ+联系表单" \
-  | npx intentc --render html --output page.html
-
-# Translate to English / Russian
-intentc translate page-ir.json en-US
-intentc translate page-ir.json ru-RU
-
-# Diff two versions
-intentc diff v1.json v2.json
-
-# Launch visual editor
-intentc play
-
-# List templates
-intentc template list
+echo "做一个高端蛋糕店官网，法式轻奢风，hero+gallery+价格表+评价+联系" \
+  | npx tsx src/cli.ts --render html --output cake.html
 ```
 
-### MCP Server (Agent Integration)
+### 不想初始化？直接试用
 
 ```bash
-# Claude Code
+echo "做一个SaaS landing page，浅蓝色调，hero+3个features+价格表" \
+  | npx tsx src/cli.ts --render html --output page.html
+```
+
+### 全部 CLI 命令
+
+```bash
+intentc init [dir]              # 交互式初始化项目
+intentc --render html|react|markdown|slide|document   # NL → 输出
+intentc translate ir.json en-US|ru-RU                 # 翻译 IR
+intentc diff a.json b.json      # 对比两个版本
+intentc play                    # 浏览器 IR 编辑器
+intentc template list           # 内置模板
+intentc memory stats            # 学习记忆统计
+intentc renderer list           # 已注册渲染器
+```
+
+### 接入 Agent（MCP）
+
+```bash
+# Claude Code — Agent 自动调 IR，用户无感
 claude mcp add --transport stdio intent-compiler -- npx tsx src/mcp-server.ts
 
-# Cursor — add to .cursor/mcp.json:
+# Cursor — 加到 .cursor/mcp.json
 # {"mcpServers":{"intent-compiler":{"type":"stdio","command":"npx","args":["tsx","src/mcp-server.ts"]}}}
 ```
 
-Then in any agent session: `compile_intent`, `render_format`, `translate_ir`, `diff_ir`, `list_renderers`.
+接入后，Agent 自动获得 6 个工具：`compile_intent` `render_format` `diff_ir` `translate_ir` `list_templates` `list_renderers`。
 
 ### API
 
 ```ts
 import { compile, renderHTML } from 'intent-compiler';
 
-const { ir } = await compile(
-  'A dark-themed landing page for a toothbrush factory. Hero + specs + FAQ + contact form.'
-);
-
-console.log(ir.design.colorScheme);      // "dark-gold"
-console.log(ir.layout.length);           // 4
+const { ir } = await compile('Landing page for a SaaS product. Hero + features + pricing.');
+console.log(ir.design.colorScheme);  // "light-blue"
 const html = renderHTML(ir);
 ```
 
-### Environment
-
-Supports Anthropic or OpenAI-compatible providers:
+### 支持的 API Key
 
 ```bash
-export ANTHROPIC_API_KEY="sk-..."    # Claude
-export OPENAI_API_KEY="sk-..."       # GPT / DeepSeek / Kimi
+export ANTHROPIC_API_KEY="sk-ant-..."                          # Claude
+export OPENAI_API_KEY="sk-..."                                 # GPT / Kimi / 通义
+export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic" # DeepSeek
+export ANTHROPIC_AUTH_TOKEN="sk-..."                           # DeepSeek
 ```
-
-**DeepSeek users:** set `ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic` — it's Anthropic-compatible!
 
 ## Intent IR Schema (v0.1.0)
 
