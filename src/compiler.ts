@@ -90,6 +90,12 @@ Copy these fields verbatim into your output. Only generate the UNLOCKED fields b
   return `You are a compiler frontend. Your job is to parse natural language descriptions of web pages and output structured Intent IR JSON.
 ${lockInstructions}
 
+## Anti-Error Rules (CRITICAL)
+	These prevent the 3 most common bugs:
+	1. NO OMISSION: If input mentions a section type, you MUST include it.
+	2. NO SHRINKAGE: If input says "6项" or "5条", output exactly that many items.
+	3. NO DRIFT: Map color/style words precisely. Do not reinterpret.
+
 ## Rules
 1. Output ONLY valid JSON — no markdown, no code fences, no explanation.
 2. The JSON MUST conform to the schema below.

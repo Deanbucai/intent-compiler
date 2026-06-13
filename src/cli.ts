@@ -425,6 +425,119 @@ async function runSiteCmd(args: string[]) {
   console.error('       intentc site build [dir]');
 }
 
+async function runBenchmark(args: string[]) {
+  const { compile } = await import('./compiler');
+  const { IRMemory } = await import('./ir-memory');
+  const fs = await import('fs');
+
+  // Read from pipe, file, or args
+  let input: string;
+  if (args[0] && !args[0].startsWith('--')) {
+    input = args.join(' ');
+  } else if (!process.stdin.isTTY) {
+    const chunks: Buffer[] = [];
+    for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
+    input = Buffer.concat(chunks).toString('utf-8').trim();
+  } else {
+    console.error('Usage: echo "description..." | intentc bench');
+    console.error('       intentc bench "description..."');
+    process.exit(1);
+  }
+
+  console.log('🧪 IR Benchmark\n');
+  console.log(`Input: "${input.slice(0, 100)}${input.length > 100 ? '...' : ''}"\n`);
+
+  const memory = new IRMemory();
+  const startTime = Date.now();
+
+  const result = await compile(input, { memory });
+  const elapsed = Date.now() - startTime;
+
+  const ir = result.ir;
+  const sections = ir.layout.sort((a, b) => a.priority - b.priority);
+
+  // ─── Metrics ────────────────────────────────────────────
+  console.log('═══ Compilation Metrics ═══');
+  console.log(`Time:         ${elapsed}ms`);
+  console.log(`Model:        ${result.model}`);
+  console.log(`Tokens:       ${result.usage?.input} in / ${result.usage?.output} out`);
+  console.log(`Domain:       ${ir.intent.domain}`);
+  console.log(`Industry:     ${ir.intent.industry || '(not detected)'}`);
+  console.log(`Language:     ${ir.intent.language}`);
+  console.log(`Design:       ${ir.design.colorScheme} · ${ir.design.tone} · ${ir.design.typography || 'sans'}`);
+
+  // Section analysis
+  console.log(`\n═══ Section Analysis ═══`);
+  console.log(`Total:        ${sections.length} sections`);
+
+  let totalItems = 0;
+  let totalFields = 0;
+  for (const s of sections) {
+    const c = s.content as Record<string, unknown>;
+    const items = (c.items as unknown[]) || [];
+    const fields = (c.fields as unknown[]) || [];
+    const bullets = (c.bullets as unknown[]) || [];
+    const badges = (c.badges as unknown[]) || [];
+    const images = (c.images as unknown[]) || [];
+    const itemCount = items.length + bullets.length + badges.length + images.length;
+    totalItems += itemCount;
+    totalFields += fields.length;
+
+    const detail = itemCount > 0 ? ` (${itemCount} items)` : fields.length > 0 ? ` (${fields.length} fields)` : '';
+    console.log(`  [${s.type.padEnd(16)}] pri ${String(s.priority).padStart(2)}${detail}`);
+  }
+
+  console.log(`\nContent items: ${totalItems} total`);
+  console.log(`Form fields:   ${totalFields} total`);
+
+  // ─── Quality Checks ─────────────────────────────────────
+  console.log(`\n═══ Quality Checks ═══`);
+
+  // Check 1: Design completeness
+  const designOK = ir.design.colorScheme && ir.design.tone;
+  console.log(`${designOK ? '✅' : '❌'} Design system: ${designOK ? 'complete' : 'missing fields'}`);
+
+  // Check 2: No empty sections
+  const emptySections = sections.filter(s => {
+    const c = s.content as Record<string, unknown>;
+    return !c.headline && !c.title && !c.question && !c.text;
+  });
+  console.log(`${emptySections.length === 0 ? '✅' : '❌'} Empty sections: ${emptySections.length === 0 ? 'none' : emptySections.map(s => s.type).join(', ')}`);
+
+  // Check 3: Priority ordering
+  const priorities = sections.map(s => s.priority);
+  const sorted = [...priorities].sort((a, b) => a - b);
+  const ordered = priorities.every((p, i) => p === sorted[i]);
+  console.log(`${ordered ? '✅' : '⚠️'} Priority order: ${ordered ? 'correct' : 'needs sorting'}`);
+
+  // Check 4: Industry detection
+  console.log(`${ir.intent.industry ? '✅' : '⚠️'} Industry detected: ${ir.intent.industry || 'N/A — add industry context for better few-shot'}`);
+
+  // Check 5: Memory (few-shot learning)
+  const similarCount = memory.search(input, 3).length;
+  console.log(`${similarCount > 0 ? '✅' : 'ℹ️'} Memory matches: ${similarCount} similar past compilation(s) used as few-shot`);
+
+  // ─── Summary ────────────────────────────────────────────
+  const score = (designOK ? 25 : 0) + (emptySections.length === 0 ? 25 : 0) + (ordered ? 20 : 0) + (ir.intent.industry ? 15 : 0) + (similarCount > 0 ? 15 : 0);
+  console.log(`\n═══ Score: ${score}/100 ═══`);
+  console.log(`(design ${designOK?25:0} + no_empty ${emptySections.length===0?25:0} + order ${ordered?20:0} + industry ${ir.intent.industry?15:0} + memory ${similarCount>0?15:0})`);
+
+  // Save report
+  const reportDir = '.intent-compiler/benchmarks';
+  if (!fs.existsSync(reportDir)) fs.mkdirSync(reportDir, { recursive: true });
+  const reportFile = `${reportDir}/bench-${Date.now()}.json`;
+  fs.writeFileSync(reportFile, JSON.stringify({
+    timestamp: new Date().toISOString(),
+    input: input.slice(0, 200),
+    metrics: { elapsed, model: result.model, tokens: result.usage, domain: ir.intent.domain, sections: sections.length, items: totalItems, fields: totalFields, score },
+    quality: { designOK, emptySections: emptySections.length, ordered, industryDetected: !!ir.intent.industry, memoryMatches: similarCount },
+    ir: ir,
+  }, null, 2));
+  console.log(`\n📄 Report: ${reportFile}`);
+
+  memory.close();
+}
+
 async function runDiff(args: string[]) {
   if (args.length < 2) {
     console.error('Usage: intentc diff <file-a.json> <file-b.json>');
@@ -527,6 +640,12 @@ async function main() {
   // Handle 'site' subcommand
   if (args[0] === 'site') {
     await runSiteCmd(args.slice(1));
+    return;
+  }
+
+  // Handle 'bench' subcommand
+  if (args[0] === 'bench') {
+    await runBenchmark(args.slice(1));
     return;
   }
 

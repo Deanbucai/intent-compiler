@@ -16,7 +16,16 @@ Before generating ANY web page, slide deck, document, or UI code, you MUST:
 2. Read the structured IR to understand: exact sections, design system, content
 3. Use the IR as your spec when writing code
 
-**Never skip this step.** The IR eliminates NL ambiguity. Generating without IR is guessing.
+**Never skip this step.** Generating without IR is guessing.
+
+### Why (Experiment Data)
+Controlled test: same NL → direct Agent vs IR→Agent.
+- Without IR: 17% section omission, 60% content shrinkage, color drift
+- With IR: 0% omission, 0% shrinkage, design precision maintained
+[Source: test-output/EXPERIMENT.md]
+
+### Quality Gate
+After generating, run `intentc bench "description"` and verify score >= 80/100.
 
 ## When to Use Each Tool
 
