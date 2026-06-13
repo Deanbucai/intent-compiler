@@ -215,3 +215,23 @@ v0.2.0 — 多渲染器（React + Markdown）展示 IR 可复用价值
 ### Fixes
 - `.intent-compiler/` added to .gitignore
 
+---
+
+## 2026-06-13 — 对照实验：证明 IR 价值
+
+### 实验
+- 同一 NL → Path A (直接 Agent) vs Path B (IR→Agent)
+- 工厂站测试：Path B 完整度显著高于 Path A
+
+### 量化结果
+- Section 遗漏: Path A 缺认证标志，Path B 6/6 完整
+- 内容缩水: Path A 规格 2→6项(67%丢失), FAQ 2→5条(60%丢失)
+- 配色漂移: Path A 随意, Path B 精确匹配 IR
+
+### IR 消除的三类错误
+1. 遗漏（forgotten sections）
+2. 缩水（fewer items than requested）
+3. 漂移（wrong design choices）
+
+实验报告: test-output/EXPERIMENT.md
+
