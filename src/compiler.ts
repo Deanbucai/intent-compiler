@@ -291,6 +291,7 @@ export async function compile(
           token_input: result.usage?.input || 0,
           token_output: result.usage?.output || 0,
           model: result.model,
+          quality_score: 0, // will be updated by bench
         });
       } catch {
         // Memory recording failure shouldn't break compilation

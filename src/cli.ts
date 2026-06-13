@@ -535,6 +535,12 @@ async function runBenchmark(args: string[]) {
   }, null, 2));
   console.log(`\n📄 Report: ${reportFile}`);
 
+  // Update quality score on last memory entry
+  try {
+    const db = (memory as any).db;
+    db.prepare('UPDATE memories SET quality_score = ? WHERE id = (SELECT MAX(id) FROM memories)').run(score);
+  } catch {}
+
   memory.close();
 }
 

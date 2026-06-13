@@ -31,6 +31,7 @@ export interface MemoryEntry {
   token_input: number;
   token_output: number;
   model: string;
+  quality_score: number;
   created_at: string;
 }
 
@@ -69,6 +70,7 @@ export class IRMemory {
         token_input INTEGER DEFAULT 0,
         token_output INTEGER DEFAULT 0,
         model TEXT DEFAULT '',
+        quality_score INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now'))
       );
 
@@ -103,10 +105,11 @@ export class IRMemory {
     token_input: number;
     token_output: number;
     model: string;
+    quality_score?: number;
   }): number {
     const stmt = this.db.prepare(`
-      INSERT INTO memories (nl_input, ir_json, domain, industry, section_types, color_scheme, tone, token_input, token_output, model)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO memories (nl_input, ir_json, domain, industry, section_types, color_scheme, tone, token_input, token_output, model, quality_score)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       entry.nl_input,
@@ -118,7 +121,8 @@ export class IRMemory {
       entry.tone,
       entry.token_input,
       entry.token_output,
-      entry.model
+      entry.model,
+      entry.quality_score || 0
     );
     return Number(result.lastInsertRowid);
   }
@@ -210,28 +214,35 @@ export class IRMemory {
    * Strategy: industry match > section pattern match > recent.
    */
   getFewShotExamples(nlInput: string, industry?: string, limit = 2): MemoryEntry[] {
-    const results: MemoryEntry[] = [];
+    const candidates: MemoryEntry[] = [];
 
     // Priority 1: Same industry
     if (industry) {
-      results.push(...this.findByIndustry(industry, limit));
+      candidates.push(...this.findByIndustry(industry, 10));
     }
 
-    // Priority 2: FTS5 keyword match (fill remaining slots)
-    if (results.length < limit) {
-      const ftsResults = this.search(nlInput, limit - results.length);
-      const existingIds = new Set(results.map((r) => r.id));
+    // Priority 2: FTS5 keyword match
+    if (candidates.length < limit) {
+      const ftsResults = this.search(nlInput, 10);
+      const seen = new Set(candidates.map((r) => r.id));
       for (const r of ftsResults) {
-        if (!existingIds.has(r.id)) results.push(r);
+        if (!seen.has(r.id)) candidates.push(r);
       }
     }
 
-    // Priority 3: Recent (fill remaining)
-    if (results.length === 0) {
-      results.push(...this.recent(limit));
+    // Priority 3: Recent fallback
+    if (candidates.length === 0) {
+      candidates.push(...this.recent(10));
     }
 
-    return results.slice(0, limit);
+    // Sort: quality_score DESC (higher = better example), then recency
+    candidates.sort((a, b) => {
+      const scoreDiff = (b.quality_score || 0) - (a.quality_score || 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      return b.created_at.localeCompare(a.created_at);
+    });
+
+    return candidates.slice(0, limit);
   }
 
   // ─── Stats ──────────────────────────────────────────────────────
