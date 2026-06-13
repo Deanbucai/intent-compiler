@@ -69,15 +69,20 @@ Intent Compiler 模式:
 
 ---
 
+## v0.0.11 — 反馈闭环 ✅
+
+**bench 错误 → prompt 自动纠错。** 每次 bench 检测到的错误按行业存储，下次同行业编译时注入为纠错提示。
+
+---
+
 ## 下一步
 
 | 优先级 | 任务 | 说明 |
 |--------|------|------|
-| P0 | `intentc init` 脚手架 | 交互式创建 IR 项目 |
-| P1 | email/form 领域 | 邮件和表单是两个高频场景 |
-| P2 | streaming 编译 | 大 IR 边编译边渲染 |
-| P3 | `intentc deploy` | 一键 Netlify/Vercel 部署 |
-| P4 | npm publish | 发布到 npm registry |
+| P0 | npm publish | 发布到 npm registry |
+| P1 | `intentc deploy` | 一键 Netlify/Vercel 部署 |
+| P2 | streaming 集成到 playground | 大 IR 边编译边渲染 |
+| P3 | email 领域 | 交易邮件模板 |
 
 ## 差异化增长曲线
 

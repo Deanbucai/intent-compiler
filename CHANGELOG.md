@@ -1,6 +1,23 @@
 # Changelog
 
-## v0.0.9 (2026-06-12)
+## v0.0.11 (2026-06-13)
+
+### Added
+- **Bench feedback loop**: errors detected by bench are stored in `error_log` table with industry tags. Next compilation in same industry gets fix hints injected into the prompt
+- **Quality-weighted memory**: few-shot examples sorted by bench score — 100/100 IRs preferred over 75/100
+- **Claude Code Skill**: `intent-compiler` skill registered — agent auto-triggers on "做个网页" etc.
+- **MCP memory integration**: `compile_intent` calls now auto-record to knowledge graph
+
+### Changed
+- Improved bench empty-section detection: now correctly handles footer, forms, galleries, badges
+- Section types expanded from 24 to 34 (ecommerce_content + business_report domains)
+
+### Fixed
+- MCP server wasn't contributing to few-shot memory — now shares IRMemory instance
+
+---
+
+## v0.0.10 (2026-06-13)
 
 ### Added
 - **`intentc init`**: Interactive project scaffolding — generates `ir.json`, `CLAUDE.md`, `.env.example`
