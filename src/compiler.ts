@@ -53,8 +53,18 @@ export type StreamEvent =
  * System prompt that turns the LLM into a compiler frontend.
  * Includes the full JSON Schema so the LLM knows the exact contract.
  */
-function buildSystemPrompt(lockedFields?: string[], existingIR?: Partial<IntentIR>, fewShots?: MemoryEntry[]): string {
+function buildSystemPrompt(lockedFields?: string[], existingIR?: Partial<IntentIR>, fewShots?: MemoryEntry[], feedback?: string[]): string {
   const schemaStr = JSON.stringify(INTENT_IR_SCHEMA, null, 2);
+
+  let feedbackBlock = '';
+  if (feedback && feedback.length > 0) {
+    feedbackBlock = `
+## FEEDBACK FROM PAST COMPILATIONS — Fix These Errors
+The following errors occurred in previous compilations for this industry. Make sure your output does NOT repeat them:
+${feedback.map(f => `- ${f}`).join('\n')}
+
+`;
+  }
 
   let fewShotBlock = '';
   if (fewShots && fewShots.length > 0) {
@@ -89,6 +99,7 @@ Copy these fields verbatim into your output. Only generate the UNLOCKED fields b
 
   return `You are a compiler frontend. Your job is to parse natural language descriptions of web pages and output structured Intent IR JSON.
 ${lockInstructions}
+${feedbackBlock}
 
 ## Anti-Error Rules (CRITICAL)
 	These prevent the 3 most common bugs:
@@ -224,14 +235,18 @@ export async function compile(
   // Fetch few-shot examples from memory if available
   let fewShots: MemoryEntry[] | undefined;
   let industry: string | undefined;
+  let feedback: string[] = [];
   if (opts.memory) {
     // Try to extract industry from input
     const industryMatch = input.match(/(?:行业|产业|领域|工厂|店|品牌|公司|企业|SaaS|B2B|电商|制造|餐饮|教育|医疗|金融|房地产)/);
     industry = industryMatch ? industryMatch[0] : undefined;
     fewShots = opts.memory.getFewShotExamples(input, industry, 2);
+    if (industry) {
+      feedback = opts.memory.getFeedbackForIndustry(industry);
+    }
   }
 
-  const systemPrompt = buildSystemPrompt(opts.lockFields, opts.existingIR, fewShots);
+  const systemPrompt = buildSystemPrompt(opts.lockFields, opts.existingIR, fewShots, feedback);
   const maxRetries = opts.maxRetries ?? 2;
 
   let lastError: Error | null = null;

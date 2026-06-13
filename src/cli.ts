@@ -500,7 +500,7 @@ async function runBenchmark(args: string[]) {
   // Check 2: No empty sections
   const emptySections = sections.filter(s => {
     const c = s.content as Record<string, unknown>;
-    return !c.headline && !c.title && !c.question && !c.text;
+    const a = c as any; return !c.headline && !c.title && !c.question && !c.text && !c.body && !(a.items?.length) && !(a.bullets?.length) && !(a.badges?.length) && !(a.images?.length) && !c.brandName && !c.copyright && !(a.fields?.length);
   });
   console.log(`${emptySections.length === 0 ? '✅' : '❌'} Empty sections: ${emptySections.length === 0 ? 'none' : emptySections.map(s => s.type).join(', ')}`);
 
@@ -540,6 +540,17 @@ async function runBenchmark(args: string[]) {
     const db = (memory as any).db;
     db.prepare('UPDATE memories SET quality_score = ? WHERE id = (SELECT MAX(id) FROM memories)').run(score);
   } catch {}
+
+  // Record errors for feedback loop
+  const industry = ir.intent.industry || 'unknown';
+  if (!designOK) memory.recordError(industry, 'design_incomplete', `Design system missing fields in ${industry} compilations`);
+  if (emptySections.length > 0) {
+    for (const s of emptySections) {
+      memory.recordError(industry, 'empty_section', `Section [${s.type}] was empty in ${industry} page`);
+    }
+  }
+  if (!ordered) memory.recordError(industry, 'priority_order', 'Section priorities not in correct order');
+  if (!ir.intent.industry) memory.recordError(industry, 'no_industry', 'Industry not detected from NL description');
 
   memory.close();
 }

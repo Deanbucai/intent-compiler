@@ -89,6 +89,15 @@ export class IRMemory {
         INSERT INTO memories_fts(memories_fts, rowid, nl_input, industry, section_types, color_scheme, tone)
         VALUES ('delete', old.id, old.nl_input, old.industry, old.section_types, old.color_scheme, old.tone);
       END;
+
+      CREATE TABLE IF NOT EXISTS error_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        industry TEXT DEFAULT '',
+        error_type TEXT NOT NULL,
+        detail TEXT NOT NULL,
+        count INTEGER DEFAULT 1,
+        last_seen TEXT DEFAULT (datetime('now'))
+      );
     `);
   }
 
@@ -262,6 +271,33 @@ export class IRMemory {
       most_common_sections: topSections.map((r) => ({ types: r.section_types, count: r.c })),
       recent,
     };
+  }
+
+  // ─── Error Log ─────────────────────────────────────────────────
+
+  recordError(industry: string, errorType: string, detail: string): void {
+    const existing = this.db.prepare(
+      'SELECT id, count FROM error_log WHERE industry=? AND error_type=? AND detail=?'
+    ).get(industry, errorType, detail) as { id: number; count: number } | undefined;
+
+    if (existing) {
+      this.db.prepare(
+        'UPDATE error_log SET count=?, last_seen=datetime(\'now\') WHERE id=?'
+      ).run(existing.count + 1, existing.id);
+    } else {
+      this.db.prepare(
+        'INSERT INTO error_log (industry, error_type, detail) VALUES (?, ?, ?)'
+      ).run(industry, errorType, detail);
+    }
+  }
+
+  getFeedbackForIndustry(industry: string): string[] {
+    const rows = this.db.prepare(
+      'SELECT error_type, detail, count FROM error_log WHERE industry=? ORDER BY count DESC LIMIT 5'
+    ).all(industry) as Array<{ error_type: string; detail: string; count: number }>;
+
+    if (rows.length === 0) return [];
+    return rows.map(r => `COMMON ERROR (seen ${r.count}x): ${r.detail} → FIX: ensure this is not missing in your output.`);
   }
 
   close(): void {
