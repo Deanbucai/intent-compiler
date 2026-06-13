@@ -21,6 +21,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod/v3';
 import { readFileSync, writeFileSync } from 'fs';
 import { registry, registerBuiltins } from './renderers/registry';
+import { IRMemory } from './ir-memory';
+// Register built-in renderers at startup
+registerBuiltins();
+const memory = new IRMemory();
 
 // Register built-in renderers at startup
 registerBuiltins();
@@ -79,7 +83,7 @@ server.registerTool(
 
     const result = await compile(
       `${input}\n\nTarget domain: ${domain}`,
-      opts as any
+      { ...opts, memory } as any
     );
 
     return {
