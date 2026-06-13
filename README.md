@@ -1,11 +1,43 @@
 # Intent Compiler
 
-> **The LLVM for vibe coding.** Natural Language → Structured Intent IR → Any Output.
 > 把模糊的自然语言，编译成 AI Agent 能精确执行的结构化意图。
+> Natural Language → Structured Intent IR → Any Output.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/Deanbucai/intent-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/intent-compiler/intent-compiler/actions)
-[![tested with tsx](https://img.shields.io/badge/tested%20with-tsx-blue)](https://github.com/privatenumber/tsx)
+
+## 30 秒用起来
+
+```bash
+# 1. 克隆 + 安装
+git clone https://github.com/Deanbucai/intent-compiler.git
+cd intent-compiler && npm install
+
+# 2. 设 API Key（任选一个）
+# DeepSeek（国内直接用）
+export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+export ANTHROPIC_AUTH_TOKEN="sk-你的key"
+
+# Claude
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# 3. 试试
+echo "做一个咖啡店landing page，暖棕色调，hero+3个features+价格表+联系表单" \
+  | npx tsx src/cli.ts --render html --output index.html
+```
+
+**输出**: `index.html` — 浏览器直接打开。
+
+### 接入 Agent（MCP）
+
+```bash
+# Claude Code / Cursor — 一行接入，Agent 自动调 IR
+claude mcp add --transport stdio intent-compiler -- npx tsx src/mcp-server.ts
+```
+
+---
+
+## 这是什么
 
 AI coding tools are great at turning prompts into code. But **turning ideas into good prompts is still 100% manual.** Intent Compiler bridges that gap — it compiles free-form natural language into a structured **Intent IR** (Intermediate Representation) that any agent, renderer, or tool can consume.
 
@@ -45,70 +77,24 @@ Source Code → AST → Machine Code     (traditional compiler)
 Natural Lang → Intent IR → Any Output  (intent compiler)
 ```
 
-## Quick Start
-
-### 第一步：安装 + 初始化项目
+## 全部命令
 
 ```bash
-# 安装
-git clone https://github.com/Deanbucai/intent-compiler.git
-cd intent-compiler && npm install
-
-# 设 API Key (DeepSeek — 国内可用)
-export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
-export ANTHROPIC_AUTH_TOKEN="sk-你的key"
-
-# 初始化项目（交互式，4 个问题）
-npx tsx src/cli.ts init my-site
+intentc init [dir]                                 # 交互式脚手架 → ir.json + CLAUDE.md
+intentc --render html|react|markdown|slide|document # NL → 五种输出
+intentc translate ir.json en-US|ru-RU               # 翻译 IR
+intentc diff a.json b.json                          # 对比两个版本
+intentc play                                        # 浏览器 IR 编辑器
+intentc bench "描述..."                              # 质量评分 (100分制)
+intentc site init|build [dir]                       # 多页面站点
+intentc template list                               # 内置模板
+intentc memory stats                                # 学习记忆统计
+intentc renderer list                               # 已注册渲染器
 ```
 
-会问你：做什么类型的项目？什么行业？什么语言？什么配色风格？然后自动生成：
+### MCP 工具（Agent 自动获得）
 
-```
-my-site/
-├── ir.json        ← 项目的结构化意图，可以直接编辑
-├── CLAUDE.md      ← Agent 规则，Agent 打开这个目录自动用 IR
-└── .env.example   ← API Key 配置模板
-```
-
-### 第二步：编译 → 出 HTML
-
-```bash
-echo "做一个高端蛋糕店官网，法式轻奢风，hero+gallery+价格表+评价+联系" \
-  | npx tsx src/cli.ts --render html --output cake.html
-```
-
-### 不想初始化？直接试用
-
-```bash
-echo "做一个SaaS landing page，浅蓝色调，hero+3个features+价格表" \
-  | npx tsx src/cli.ts --render html --output page.html
-```
-
-### 全部 CLI 命令
-
-```bash
-intentc init [dir]              # 交互式初始化项目
-intentc --render html|react|markdown|slide|document   # NL → 输出
-intentc translate ir.json en-US|ru-RU                 # 翻译 IR
-intentc diff a.json b.json      # 对比两个版本
-intentc play                    # 浏览器 IR 编辑器
-intentc template list           # 内置模板
-intentc memory stats            # 学习记忆统计
-intentc renderer list           # 已注册渲染器
-```
-
-### 接入 Agent（MCP）
-
-```bash
-# Claude Code — Agent 自动调 IR，用户无感
-claude mcp add --transport stdio intent-compiler -- npx tsx src/mcp-server.ts
-
-# Cursor — 加到 .cursor/mcp.json
-# {"mcpServers":{"intent-compiler":{"type":"stdio","command":"npx","args":["tsx","src/mcp-server.ts"]}}}
-```
-
-接入后，Agent 自动获得 6 个工具：`compile_intent` `render_format` `diff_ir` `translate_ir` `list_templates` `list_renderers`。
+`compile_intent` `render_format` `diff_ir` `translate_ir` `list_templates` `list_renderers`
 
 ### API
 
