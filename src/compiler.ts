@@ -113,6 +113,12 @@ ${lockInstructions}
    - For document (report/manual/brochure):
      "文档标题"→document_title, "章节"→chapter, "正文"→body, "表格"→doc_table,
      "图片"→doc_image, "目录"→toc
+   - For ecommerce_content (product descriptions, marketing copy, SEO):
+     "产品描述/商品文案"→product_description, "营销邮件"→marketing_email,
+     "社交媒体/小红书/朋友圈"→social_post, "SEO/搜索优化"→seo_meta, "品牌故事"→brand_story
+   - For business_report (management reports, KPI analysis):
+     "执行摘要/总结"→executive_summary, "差异分析/对比"→variance_analysis,
+     "KPI/指标表"→kpi_table, "建议/下一步"→recommendations
    - Anything that doesn't fit → custom
 5. Assign priorities based on the order the user mentions sections (10, 20, 30...).
 6. Keep content concise — headlines under 50 chars, descriptions under 200 chars.

@@ -24,7 +24,7 @@ export interface IntentIR {
 
 export interface IntentMeta {
   /** Domain — determines which renderers and section types are available */
-  domain: 'web_page' | 'slide_deck' | 'document';
+  domain: 'web_page' | 'slide_deck' | 'document' | 'ecommerce_content' | 'business_report';
   /** Page type */
   type: 'landing' | 'dashboard' | 'blog' | 'form' | 'portfolio';
   /** Industry context, e.g. 'manufacturing', 'saas', 'healthcare' */
@@ -85,6 +85,17 @@ export type SectionType =
   | 'doc_table'
   | 'doc_image'
   | 'toc'
+  // ecommerce_content sections
+  | 'product_description'
+  | 'marketing_email'
+  | 'social_post'
+  | 'seo_meta'
+  | 'brand_story'
+  // business_report sections
+  | 'executive_summary'
+  | 'variance_analysis'
+  | 'kpi_table'
+  | 'recommendations'
   // catch-all
   | 'custom';
 
@@ -268,6 +279,77 @@ export interface TocContent {
   title?: string;
 }
 
+// ─── E-Commerce Content Types ─────────────────────────────
+
+export interface ProductDescriptionContent {
+  headline: string;
+  /** Selling points: 3-5 benefits */
+  selling_points: string[];
+  /** Technical specs */
+  specs?: Array<{ label: string; value: string }>;
+  /** Price info */
+  price?: string;
+  /** CTA text */
+  cta?: string;
+  /** Tone reference (e.g. "friendly expert", "luxury curator") */
+  tone?: string;
+}
+
+export interface MarketingEmailContent {
+  subject: string;
+  preheader?: string;
+  body: string;
+  cta_text: string;
+  cta_link?: string;
+}
+
+export interface SocialPostContent {
+  caption: string;
+  hashtags: string[];
+  image_description?: string;
+  link?: string;
+}
+
+export interface SeoMetaContent {
+  title_tag: string;
+  meta_description: string;
+  /** JSON-LD structured data string */
+  json_ld?: string;
+}
+
+export interface BrandStoryContent {
+  headline: string;
+  narrative: string;
+  values: string[];
+  origin?: string;
+}
+
+// ─── Business Report Content Types ────────────────────────
+
+export interface ExecutiveSummaryContent {
+  title: string;
+  key_finding: string;
+  metrics: Array<{ label: string; value: string; change?: string }>;
+  conclusion: string;
+}
+
+export interface VarianceAnalysisContent {
+  title: string;
+  period_a: string;
+  period_b: string;
+  items: Array<{ metric: string; value_a: string; value_b: string; delta: string; explanation: string }>;
+}
+
+export interface KpiTableContent {
+  title: string;
+  items: Array<{ kpi: string; current: string; target: string; status: 'on_track' | 'at_risk' | 'behind' }>;
+}
+
+export interface RecommendationsContent {
+  title: string;
+  items: Array<{ recommendation: string; priority: 'high' | 'medium' | 'low'; rationale: string }>;
+}
+
 export interface CustomContent {
   component: string;
   props?: Record<string, unknown>;
@@ -276,31 +358,16 @@ export interface CustomContent {
 /** Union of all section content types across all domains */
 export type SectionContent =
   // web_page
-  | HeroContent
-  | FeaturesContent
-  | SpecsContent
-  | FaqContent
-  | ContactFormContent
-  | TrustBadgesContent
-  | PricingContent
-  | GalleryContent
-  | CtaContent
-  | TestimonialsContent
-  | FooterContent
+  | HeroContent | FeaturesContent | SpecsContent | FaqContent | ContactFormContent
+  | TrustBadgesContent | PricingContent | GalleryContent | CtaContent | TestimonialsContent | FooterContent
   // slide_deck
-  | TitleSlideContent
-  | ContentSlideContent
-  | BulletsSlideContent
-  | QuoteSlideContent
-  | ImageSlideContent
-  | EndingSlideContent
+  | TitleSlideContent | ContentSlideContent | BulletsSlideContent | QuoteSlideContent | ImageSlideContent | EndingSlideContent
   // document
-  | DocTitleContent
-  | ChapterContent
-  | BodyContent
-  | DocTableContent
-  | DocImageContent
-  | TocContent
+  | DocTitleContent | ChapterContent | BodyContent | DocTableContent | DocImageContent | TocContent
+  // ecommerce_content
+  | ProductDescriptionContent | MarketingEmailContent | SocialPostContent | SeoMetaContent | BrandStoryContent
+  // business_report
+  | ExecutiveSummaryContent | VarianceAnalysisContent | KpiTableContent | RecommendationsContent
   // catch-all
   | CustomContent;
 
@@ -343,7 +410,7 @@ export const INTENT_IR_SCHEMA = {
       properties: {
         domain: {
           type: 'string',
-          enum: ['web_page', 'slide_deck', 'document'],
+          enum: ['web_page', 'slide_deck', 'document', 'ecommerce_content', 'business_report'],
           description: 'Intent domain',
         },
         type: {
@@ -406,6 +473,8 @@ export const INTENT_IR_SCHEMA = {
               'pricing','gallery','cta','testimonials','footer',
               'title_slide','content_slide','bullets_slide','quote_slide','image_slide','ending_slide',
               'document_title','chapter','body','doc_table','doc_image','toc',
+              'product_description','marketing_email','social_post','seo_meta','brand_story',
+              'executive_summary','variance_analysis','kpi_table','recommendations',
               'custom',
             ],
             description: 'Section type',
