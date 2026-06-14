@@ -790,6 +790,9 @@ async function main() {
 
   if (opts.output) {
     const fs = await import('fs');
+    const path = await import('path');
+    const dir = path.dirname(opts.output);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(opts.output, output, 'utf-8');
     console.error(`📄 Written to ${opts.output}`);
   } else {

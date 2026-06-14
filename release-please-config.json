@@ -4,8 +4,9 @@
       "release-type": "node",
       "package-name": "intent-compiler",
       "changelog-path": "CHANGELOG.md",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true
+      "bump-minor-pre-major": false,
+      "bump-patch-for-minor-pre-major": false,
+      "release-as": "0.0.12"
     }
   }
 }
