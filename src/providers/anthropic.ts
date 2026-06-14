@@ -37,13 +37,27 @@ export async function callAnthropic(
 
   const baseURL = opts.baseURL || process.env.ANTHROPIC_BASE_URL || undefined;
 
+  // Smart model selection based on DeepSeek V4 benchmarks (2026):
+  // Flash: costs 8% of Pro, handles 80% of daily tasks (single-file code, summaries, chat)
+  // Pro: needed for multi-step agent loops, complex architecture, high-accuracy facts
+  const resolvedModel = opts.model || (() => {
+    const isComplex =
+      userMessage.length > 400 ||                          // Long description
+      /\b(?:技术规格|认证标志|价格表|gallery|slide|document|ecommerce_content|business_report)\b/.test(userMessage) || // Multi-domain
+      /\b(?:俄文|Russian|ru-RU)\b/.test(userMessage) ||   // Translation needs accuracy
+      (userMessage.match(/\d+\s*(?:项|条|个|档)/g) || []).length > 2; // Multiple numbered lists
+    return isComplex
+      ? (process.env.ANTHROPIC_MODEL || 'deepseek-v4-pro')
+      : (process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL || 'deepseek-v4-flash');
+  })();
+
   const client = new Anthropic({
     apiKey,
     ...(baseURL ? { baseURL } : {}),
   });
 
   const resp = await client.messages.create({
-    model: opts.model || process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
+    model: resolvedModel,
     max_tokens: opts.maxTokens || 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],

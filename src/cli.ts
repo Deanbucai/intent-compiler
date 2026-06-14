@@ -23,6 +23,7 @@ interface CLIOptions {
   render?: 'html' | 'react' | 'markdown' | 'slide' | 'document' | 'json';
   provider?: 'anthropic' | 'openai';
   model?: string;
+  fast?: boolean;
 }
 
 async function runPlayground() {
@@ -459,7 +460,7 @@ async function runBenchmark(args: string[]) {
   // ─── Metrics ────────────────────────────────────────────
   console.log('═══ Compilation Metrics ═══');
   console.log(`Time:         ${elapsed}ms`);
-  console.log(`Model:        ${result.model}`);
+  console.log(`Model:        ${result.model} ${result.model?.includes('flash') ? '⚡' : result.model?.includes('pro') ? '🔴' : ''}`);
   console.log(`Tokens:       ${result.usage?.input} in / ${result.usage?.output} out`);
   console.log(`Domain:       ${ir.intent.domain}`);
   console.log(`Industry:     ${ir.intent.industry || '(not detected)'}`);
@@ -762,7 +763,10 @@ async function main() {
 
   const result = await compile(input, {
     provider: opts.provider,
-    providerOpts: opts.model ? { model: opts.model } : undefined,
+    providerOpts: {
+      ...(opts.model ? { model: opts.model } : {}),
+      ...(opts.fast ? { model: process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL || 'deepseek-v4-flash' } : {}),
+    },
     memory,
   });
 
@@ -819,6 +823,9 @@ function parseArgs(args: string[]): CLIOptions {
       case '--model':
       case '-m':
         opts.model = args[++i];
+        break;
+      case '--fast':
+        opts.fast = true;
         break;
       case '--help':
       case '-h':
