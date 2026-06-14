@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.0](https://github.com/Deanbucai/intent-compiler/compare/v0.0.11...v0.1.0) (2026-06-14)
+
+
+### Features
+
+* intentc deploy — one-click Netlify deployment ([5b5bd88](https://github.com/Deanbucai/intent-compiler/commit/5b5bd887bae27b0cd925a2cda5dcb376994d8f03))
+* smart model selection — flash for simple, pro for complex ([ca5d392](https://github.com/Deanbucai/intent-compiler/commit/ca5d3923c5609c55b510fbcfb2f23d943d3bfe1d))
+* standalone playground — zero-install, API key in browser ([83bdb1c](https://github.com/Deanbucai/intent-compiler/commit/83bdb1ce4c9b71ba9cac22fabdcf7c11df4d5ceb))
+
 ## v0.0.11 (2026-06-13)
 
 ### Added
