@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Intent Compiler Playground</title>
+<style>
+:root{--bg:#0d0d12;--surface:#16161e;--border:#252530;--text:#d4d4d8;--accent:#6366f1;--muted:#71717a;--error:#f87171}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter','PingFang SC',sans-serif;height:100vh;display:flex;flex-direction:column}
+header{padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+header h1{font-size:14px;font-weight:700;color:var(--accent);white-space:nowrap}
+header input,header select,header button{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px;font-family:inherit}
+header button{background:var(--accent);color:#fff;border:none;cursor:pointer;font-weight:600;white-space:nowrap}
+header button:hover{opacity:.9}
+header button:disabled{opacity:.5;cursor:default}
+#key-input{width:200px;font-family:monospace;font-size:11px}
+#nl-input{flex:1;min-width:200px}
+main{display:flex;flex:1;overflow:hidden}
+.panel{flex:1;display:flex;flex-direction:column;min-width:0}
+.panel-header{padding:6px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface);border-bottom:1px solid var(--border)}
+#editor{flex:1;padding:12px;background:var(--bg);color:var(--text);border:none;resize:none;font-family:monospace;font-size:13px;line-height:1.6;outline:none}
+#preview-frame{flex:1;border:none;background:#fff}
+.divider{width:4px;background:var(--border);cursor:col-resize;flex-shrink:0}
+.divider:hover{background:var(--accent)}
+#status{font-size:11px;color:var(--muted);white-space:nowrap}
+.error-bar{background:var(--error);color:#fff;padding:6px 12px;font-size:12px;display:none}
+.error-bar.show{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Intent Compiler</h1>
+  <input id="key-input" type="password" placeholder="API Key (sk-...)" title="Your Anthropic API key. Stored in browser only.">
+  <input id="nl-input" placeholder="Describe your page... 做一个咖啡店官网，暖色调，hero+features+pricing+contact">
+  <button id="compile-btn" onclick="compileNL()">Compile → IR</button>
+  <button onclick="copyIR()">📋 Copy IR</button>
+  <button onclick="download()">⬇ HTML</button>
+  <span id="status">ready</span>
+</header>
+
+<div class="error-bar" id="error-bar"></div>
+
+<main>
+  <div class="panel">
+    <div class="panel-header">Intent IR</div>
+    <textarea id="editor" spellcheck="false" placeholder='Click "Compile → IR" to transform NL into structured IR...'></textarea>
+  </div>
+  <div class="divider" id="divider"></div>
+  <div class="panel">
+    <div class="panel-header">Live Preview</div>
+    <iframe id="preview-frame" sandbox="allow-same-origin"></iframe>
+  </div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const editor=$('editor'),preview=$('preview-frame'),errorBar=$('error-bar'),status=$('status');
+let debounceTimer=null;
+
+// ─── Compile NL → IR ────────────────────────────────────
+async function compileNL(){
+  const nl=$('nl-input').value.trim();
+  if(!nl){error('Please enter a description first');return}
+  const key=$('key-input').value.trim()||localStorage.getItem('ic_api_key');
+  if(!key){error('Please enter your API Key first');return}
+  localStorage.setItem('ic_api_key',key);
+
+  const btn=$('compile-btn');btn.disabled=true;btn.textContent='Compiling...';
+  status.textContent='compiling...';
+  errorBar.classList.remove('show');
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:4096,
+        system:'You are a compiler frontend. Convert natural language to Intent IR JSON. Output ONLY valid JSON, no markdown. Follow the schema: {"$schema":"...","version":"0.1.0","intent":{"domain":"web_page","type":"landing","industry":"...","language":"zh-CN","summary":"..."},"design":{"colorScheme":"...","tone":"...","typography":"modern-sans","responsive":true},"layout":[{"id":"...","type":"hero|features|specs|faq|pricing|gallery|cta|testimonials|trust_badges|contact_form|footer|custom","priority":10,"content":{...}}]}. Map colors: dark→dark-gold, blue→light-blue, minimal→minimal-white, pink/warm→warm-pink-cream-gold. Count items: if user says 3 features, output 3 items.',
+        messages:[{role:'user',content:nl}]
+      })
+    });
+    if(!resp.ok)throw new Error(await resp.text());
+    const data=await resp.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+
+    // Extract JSON
+    let json=text;
+    const m=text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if(m)json=m[1].trim();
+    else{const b=text.indexOf('{'),e=text.lastIndexOf('}');if(b>=0&&e>b)json=text.slice(b,e+1)}
+
+    const ir=JSON.parse(json);
+    editor.value=JSON.stringify(ir,null,2);
+    updatePreview();
+    status.textContent=`${ir.layout?.length||0} sections`;
+  }catch(e){error(e.message)}finally{btn.disabled=false;btn.textContent='Compile → IR'}
+}
+
+// ─── Preview (same mini-renderer as before) ─────────────
+function getColors(cs){
+  const p={'dark-gold':{bg:'#08080f',surface:'#12121a',text:'#e8e8e8',accent:'#c9a84c',muted:'#888'},'dark-blue':{bg:'#0a0e1a',surface:'#111827',text:'#e2e8f0',accent:'#3b82f6',muted:'#94a3b8'},'light-blue':{bg:'#fff',surface:'#f8fafc',text:'#1e293b',accent:'#2563eb',muted:'#64748b'},'minimal-white':{bg:'#fff',surface:'#f5f5f5',text:'#171717',accent:'#404040',muted:'#737373'}};
+  for(const[k,v]of Object.entries(p))if(cs.startsWith(k))return v;
+  return p['dark-gold'];
+}
+
+function renderPreview(ir){
+  const c=getColors(ir.design?.colorScheme||'dark-gold');
+  const ss=(ir.layout||[]).sort((a,b)=>a.priority-b.priority);
+  const h=ss.map(s=>{
+    const x=s.content||{};
+    switch(s.type){
+      case 'hero':return`<section style="padding:80px 24px;text-align:center;background:linear-gradient(135deg,${c.bg},${c.surface})"><h1 style="font-size:2.5rem;color:${c.text}">${x.headline||''}</h1>${x.subheadline?`<p style="color:${c.muted}">${x.subheadline}</p>`:''}${x.cta?`<a href="#" style="display:inline-block;padding:12px 32px;background:${c.accent};color:${c.bg};border-radius:6px;text-decoration:none;font-weight:600;margin-top:24px">${x.cta.text}</a>`:''}</section>`;
+      case 'features':return`<section style="padding:60px 24px;background:${c.bg}">${x.title?`<h2 style="font-size:1.8rem;color:${c.text};text-align:center;margin-bottom:32px">${x.title}</h2>`:''}<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;max-width:1000px;margin:0 auto">${(x.items||[]).map(i=>`<div style="padding:24px;background:${c.surface};border-radius:6px;border:1px solid rgba(255,255,255,.06)"><h3 style="color:${c.accent};margin-bottom:8px">${i.icon||''} ${i.title}</h3><p style="color:${c.muted}">${i.description}</p></div>`).join('')}</div></section>`;
+      case 'specs':return`<section style="padding:60px 24px;background:${c.surface}">${x.title?`<h2 style="font-size:1.8rem;color:${c.text};text-align:center;margin-bottom:32px">${x.title}</h2>`:''}<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;max-width:1000px;margin:0 auto">${(x.items||[]).map(i=>`<div style="padding:20px;background:${c.bg};border-left:3px solid ${c.accent}"><div style="color:${c.muted};font-size:.7rem;text-transform:uppercase;margin-bottom:4px">${i.label}</div><div style="font-weight:600">${i.value}</div></div>`).join('')}</div></section>`;
+      case 'pricing':return`<section style="padding:60px 24px;background:${c.bg}">${x.title?`<h2 style="font-size:1.8rem;color:${c.text};text-align:center;margin-bottom:32px">${x.title}</h2>`:''}<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:900px;margin:0 auto">${(x.items||[]).map(p=>`<div style="padding:32px 20px;background:${p.highlighted?c.accent:c.surface};color:${p.highlighted?c.bg:c.text};border-radius:8px;text-align:center"><h3>${p.name}</h3><div style="font-size:2rem;font-weight:700;margin:16px 0">${p.price}</div>${(p.features||[]).map(f=>`<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)">✓ ${f}</div>`).join('')}</div>`).join('')}</div></section>`;
+      case 'faq':return`<section style="padding:60px 24px;background:${c.bg}"><div style="max-width:700px;margin:0 auto">${x.title?`<h2 style="font-size:1.8rem;color:${c.text};text-align:center;margin-bottom:32px">${x.title}</h2>`:''}${(x.items||[]).map((q,i)=>`<details ${i===0?'open':''} style="margin-bottom:8px;padding:16px;background:${c.surface};border-radius:4px;cursor:pointer"><summary style="font-weight:600">${q.question}</summary><p style="margin-top:12px;color:${c.muted}">${q.answer}</p></details>`).join('')}</div></section>`;
+      case 'contact_form':return`<section style="padding:60px 24px;background:${c.surface}">${x.title?`<h2 style="font-size:1.8rem;color:${c.text};text-align:center;margin-bottom:24px">${x.title}</h2>`:''}<form style="max-width:500px;margin:0 auto">${(x.fields||[]).map(f=>`<div style="margin-bottom:12px"><label style="display:block;color:${c.text};margin-bottom:4px;font-size:.85rem">${f.label}${f.required?' *':''}</label><input style="width:100%;padding:10px;background:${c.bg};border:1px solid rgba(255,255,255,.1);border-radius:4px;color:${c.text}" ${f.required?'required':''}></div>`).join('')}<button style="width:100%;padding:12px;background:${c.accent};color:${c.bg};border:none;border-radius:4px;font-weight:600;cursor:pointer">Submit</button></form></section>`;
+      default:return'';
+    }
+  }).join('');
+  return`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${ir.intent?.summary||'Preview'}</title><style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:${c.bg};color:${c.text}}</style></head><body>${h}</body></html>`;
+}
+
+function updatePreview(){
+  try{
+    const ir=JSON.parse(editor.value);
+    const blob=new Blob([renderPreview(ir)],{type:'text/html'});
+    preview.src=URL.createObjectURL(blob);
+    errorBar.classList.remove('show');
+  }catch(e){errorBar.textContent=e.message;errorBar.classList.add('show')}
+}
+
+// ─── UI ──────────────────────────────────────────────────
+function error(m){errorBar.textContent='❌ '+m;errorBar.classList.add('show');status.textContent='error'}
+function copyIR(){navigator.clipboard.writeText(editor.value).then(()=>{status.textContent='copied!';setTimeout(()=>status.textContent='ready',1500)})}
+function download(){
+  try{
+    const ir=JSON.parse(editor.value||'{}');
+    const blob=new Blob([renderPreview(ir)],{type:'text/html'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='page.html';a.click();
+  }catch(e){error('Invalid IR')}
+}
+editor.addEventListener('input',()=>{clearTimeout(debounceTimer);debounceTimer=setTimeout(updatePreview,300)});
+$('nl-input').addEventListener('keydown',e=>{if(e.key==='Enter')compileNL()});
+
+// Load saved key
+if(localStorage.getItem('ic_api_key'))$('key-input').value=localStorage.getItem('ic_api_key');
+
+// Load default template
+const defaultIR={"$schema":"","version":"0.1.0","intent":{"domain":"web_page","type":"landing","industry":"manufacturing","language":"zh-CN","summary":"DR.WARM B2B"},"design":{"colorScheme":"dark-gold","tone":"professional","typography":"modern-sans","responsive":true},"layout":[{"id":"hero","type":"hero","priority":10,"content":{"headline":"DR.WARM","subheadline":"极致洁净·轻奢口腔护理","cta":{"text":"探索工厂","action":"factory"}}},{"id":"specs","type":"specs","priority":20,"content":{"title":"技术规格","items":[{"label":"刷毛","value":"PBT杜邦丝"},{"label":"刷柄","value":"PP食品级"},{"label":"产能","value":"月产180万支"},{"label":"认证","value":"ISO/FDA/CE/SGS"}]}},{"id":"faq","type":"faq","priority":30,"content":{"title":"常见问题","items":[{"question":"MOQ多少？","answer":"常规款3000支起订"},{"question":"可以定制吗？","answer":"支持刷毛颜色、丝印、彩盒定制"}]}}]};
+editor.value=JSON.stringify(defaultIR,null,2);
+updatePreview();
+
+// Divider drag
+let dragging=false;
+document.getElementById('divider').addEventListener('mousedown',()=>{dragging=true});
+document.addEventListener('mousemove',e=>{if(!dragging)return;const main=document.querySelector('main'),rect=main.getBoundingClientRect(),pct=((e.clientX-rect.left)/rect.width)*100;document.querySelectorAll('.panel')[0].style.flex=`0 0 ${Math.max(20,Math.min(80,pct))}%`});
+document.addEventListener('mouseup',()=>{dragging=false});
+</script>
+</body>
+</html>
