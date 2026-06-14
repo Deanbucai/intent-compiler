@@ -1,6 +1,6 @@
 {
   "name": "@deanbucai/intent-compiler",
-  "version": "0.0.12",
+  "version": "0.0.11",
   "description": "Natural Language → Structured Intent IR → Any Output. The LLVM for vibe coding.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
