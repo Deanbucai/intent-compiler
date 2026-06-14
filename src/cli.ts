@@ -555,6 +555,64 @@ async function runBenchmark(args: string[]) {
   memory.close();
 }
 
+async function runDeploy(args: string[]) {
+  const fs = await import('fs');
+  const path = await import('path');
+
+  const file = args[0] || '';
+  if (!file || !fs.existsSync(file)) {
+    console.error('Usage: intentc deploy <file.html>');
+    console.error('  Deploys an HTML file to Netlify and returns a public URL.');
+    console.error('  Requires NETLIFY_AUTH_TOKEN env var. Get one at https://app.netlify.com/user/applications');
+    process.exit(1);
+  }
+
+  const token = process.env.NETLIFY_AUTH_TOKEN;
+  if (!token) {
+    console.error('NETLIFY_AUTH_TOKEN not set.');
+    console.error('  1. Go to https://app.netlify.com/user/applications');
+    console.error('  2. Create a new personal access token');
+    console.error('  3. export NETLIFY_AUTH_TOKEN=your-token');
+    process.exit(1);
+  }
+
+  const html = fs.readFileSync(file, 'utf-8');
+  const siteName = path.basename(file, '.html');
+
+  console.error(`🚀 Deploying ${siteName}...`);
+
+  try {
+    // Create a new site
+    const createResp = await fetch('https://api.netlify.com/api/v1/sites', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `intentc-${siteName}-${Date.now()}` }),
+    });
+    if (!createResp.ok) {
+      const err = await createResp.text();
+      throw new Error(`Create site failed: ${createResp.status} ${err}`);
+    }
+    const site = await createResp.json() as { id: string; ssl_url: string; name: string };
+
+    // Deploy the HTML
+    const deployResp = await fetch(`https://api.netlify.com/api/v1/sites/${site.id}/deploys`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/octet-stream' },
+      body: html,
+    });
+    if (!deployResp.ok) {
+      const err = await deployResp.text();
+      throw new Error(`Deploy failed: ${deployResp.status} ${err}`);
+    }
+
+    console.error(`✅ Deployed: ${site.ssl_url}`);
+    console.log(site.ssl_url);
+  } catch (e: unknown) {
+    console.error(`❌ ${e instanceof Error ? e.message : String(e)}`);
+    process.exit(1);
+  }
+}
+
 async function runDiff(args: string[]) {
   if (args.length < 2) {
     console.error('Usage: intentc diff <file-a.json> <file-b.json>');
@@ -663,6 +721,12 @@ async function main() {
   // Handle 'bench' subcommand
   if (args[0] === 'bench') {
     await runBenchmark(args.slice(1));
+    return;
+  }
+
+  // Handle 'deploy' subcommand
+  if (args[0] === 'deploy') {
+    await runDeploy(args.slice(1));
     return;
   }
 
