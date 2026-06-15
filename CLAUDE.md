@@ -1,5 +1,19 @@
 # Intent Compiler — Agent Configuration
 
+## Model Selection
+
+**Always compile with `--fast` unless the user explicitly asks for Pro.**
+
+```bash
+# Default (flash — fast, cheap, correct for 90% of compilations):
+echo "做一个..." | intentc --fast
+
+# Pro only when: multi-domain, complex 3+ section types with counts, or ru-RU:
+echo "..." | intentc --model deepseek-v4-pro
+```
+
+Model mapping: Haiku/Sonnet → flash, Opus → pro. The compiler reads `ANTHROPIC_MODEL` from the session, so in Opus mode it defaults to pro. Use `--fast` to force flash.
+
 <!--
   Add this file to any project where you want AI agents to automatically
   use Intent IR for structured code generation.
