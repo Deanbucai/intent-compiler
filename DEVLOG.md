@@ -1,5 +1,25 @@
 # Development Log
 
+## 2026-06-15 — v0.0.13 (Seed Memory Bank + Compiler Speed)
+
+### 记忆库预填充
+- 19 条黄金种子 IR，覆盖全部 5 领域 13 行业
+- `intentc memory seed` CLI 命令，可重复运行（自动去重）
+- 记忆库从零开始 → 首次使用即可享受行业匹配的 few-shot learning
+
+### 编译器加速（4项优化）
+1. **前缀缓存优化**: 系统提示重排——固定内容（规则/Schema/示例）前置 → DeepSeek 自动前缀缓存，后续调用 TTFT 降低 40-80%
+2. **Schema Minify**: 剥离所有 description 字段，4291→1708 chars（-60%, ~646 tokens）
+3. **响应缓存**: LRU Map 缓存，5-min TTL，最多 50 条，相同 NL 输入 0ms 返回
+4. **Token 预算动态调整**: ≤4 sections→2048, ≤7→3072, 更大→4096
+
+### 种子分布
+- web_page 7条：制造/SaaS/餐饮/摄影/电商/教育/医疗
+- slide_deck 3条：融资PPT/新品发布/安全培训
+- document 3条：产品说明书/技术报告/企业宣传册
+- ecommerce_content 3条：产品详情/品牌发布/大促营销
+- business_report 3条：经营分析/SaaS季度回顾/创业数据看板
+
 ## 2026-06-12 — v0.1.0 (Concept Proven)
 
 ### 背景

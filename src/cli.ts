@@ -231,6 +231,24 @@ async function runMemoryCmd(args: string[]) {
     return;
   }
 
+  if (cmd === 'seed') {
+    const { seedMemory, SEED_COUNT } = await import('./seed-memory');
+    const stats0 = memory.getStats();
+    console.log(`🌱 Seeding memory bank (${SEED_COUNT} gold examples)...`);
+    if (stats0.total > 0) {
+      console.log(`   Current entries: ${stats0.total} (will skip duplicates)`);
+    }
+    const result = seedMemory(memory);
+    const stats1 = memory.getStats();
+    console.log(`✅ Seed complete: ${result.inserted} inserted, ${result.skipped} skipped`);
+    console.log(`   Total entries: ${stats1.total} (was ${stats0.total})`);
+    if (stats1.total > 0) {
+      console.log(`   By domain:`, Object.entries(stats1.by_domain).map(([k, v]) => `${k}:${v}`).join(', '));
+    }
+    memory.close();
+    return;
+  }
+
   if (cmd === 'clear') {
     memory.close();
     const fs = await import('fs');
@@ -243,6 +261,7 @@ async function runMemoryCmd(args: string[]) {
   console.error('Usage: intentc memory stats');
   console.error('       intentc memory search <query>');
   console.error('       intentc memory patterns <industry>');
+  console.error('       intentc memory seed');
   console.error('       intentc memory clear');
   memory.close();
 }
@@ -770,7 +789,7 @@ async function main() {
     memory,
   });
 
-  console.error(`✅ Compiled (${result.model}, ${result.usage?.input}+${result.usage?.output} tokens)`);
+  console.error(`✅ Compiled (${result.model}, ${result.usage?.input}+${result.usage?.output} tokens${result.cached ? ', ⚡ CACHE HIT' : ''})`);
 
   // Output
   let output: string;

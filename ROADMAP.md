@@ -75,14 +75,23 @@ Intent Compiler 模式:
 
 ---
 
+## v0.0.13 — 记忆库预填充 ✅
+
+**19 条黄金种子 IR。** `intentc memory seed` 一键注入，覆盖全部 5 领域 13 行业。
+
+从零开始编译时，记忆库立即能提供行业匹配的 few-shot 示例和 section pattern 参考。
+
+---
+
 ## 下一步
 
 | 优先级 | 任务 | 说明 |
 |--------|------|------|
-| P0 | npm publish | 发布到 npm registry |
-| P1 | `intentc deploy` | 一键 Netlify/Vercel 部署 |
-| P2 | streaming 集成到 playground | 大 IR 边编译边渲染 |
-| P3 | email 领域 | 交易邮件模板 |
+| P0 | npm publish 0.0.13 | 发布到 npm registry |
+| P1 | `dev_docs` 领域 | 开发文档：readme/changelog/api_doc/adr/tech_spec |
+| P2 | 中文 FTS5 分词 | 接入 ICU 分词器或 jieba，解决中文检索 0 匹配问题 |
+| P3 | streaming 集成到 playground | 大 IR 边编译边渲染 |
+| P4 | email 领域 | 交易邮件模板 |
 
 ## 差异化增长曲线
 

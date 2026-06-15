@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.0.13 (2026-06-15)
+
+### Added
+- **记忆库预填充**: `intentc memory seed` — 19 条黄金种子 IR 覆盖全部 5 领域 13 个行业，每条 quality_score=100
+  - web_page: 制造工厂/SaaS/餐饮/摄影/电商/教育/牙科 — 覆盖 landing/portfolio 类型，常见 section 组合
+  - slide_deck: 融资PPT/新品发布/安全培训 — 覆盖 pitch deck/presentation/training 场景
+  - document: 产品说明书/技术报告/企业宣传册 — 覆盖 manual/report/brochure
+  - ecommerce_content: 产品详情/品牌发布/大促全渠道 — 覆盖单品/品牌故事/营销活动
+  - business_report: 经营分析/SaaS季度回顾/创业数据看板 — 覆盖中文/KPI/差异分析/建议
+- 种子数据文件 `src/seed-memory.ts` — 每个种子是完整的有效 IR JSON，通过 schema 验证
+
+### Changed
+- **编译器加速（4项优化）**:
+  1. **前缀缓存优化**: 固定内容（规则/Schema/示例）前置 → DeepSeek 自动前缀缓存命中，TTFT 降低 40-80%
+  2. **Schema Minify**: 剥离 description 字段，4291→1708 chars（省 60%、~646 tokens）
+  3. **响应缓存**: LRU 内存缓存，5-min TTL，相同输入 0ms 返回
+  4. **Token 预算**: 按 section 数量动态调整（≤4→2048, ≤7→3072, 更大→4096）
+- Prompt 瘦身：规则说明从 20 行压缩至 12 行，示例 IR 去掉空白
+- Few-shot 压缩：只传 design + layout（不传完整 IR），减少变量区 token
+- `CompileResult` 新增 `cached` 字段、`CompileOptions` 新增 `skipCache` 选项
+- CLI 缓存命中时显示 `⚡ CACHE HIT`
+
+### Fixed
+- `compileStream()` 之前硬编码 4096 max_tokens，现在使用与 `compile()` 相同的动态 token 预算
+
 ## v0.0.11 (2026-06-13)
 
 ### Added
