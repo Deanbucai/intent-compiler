@@ -1,5 +1,5 @@
 import Ajv from 'ajv';
-import { callAnthropic, type ProviderOptions } from './providers/anthropic';
+import { callAnthropic, sanitizeModel, type ProviderOptions } from './providers/anthropic';
 import { callOpenAI } from './providers/openai';
 import { INTENT_IR_SCHEMA, type IntentIR } from './schema';
 import type { IRMemory, MemoryEntry } from './ir-memory';
@@ -380,7 +380,7 @@ export async function* compileStream(
   });
 
   const systemPrompt = buildSystemPrompt(opts.lockFields, opts.existingIR);
-  const model = opts.providerOpts?.model || process.env.ANTHROPIC_MODEL || 'deepseek-v4-flash';
+  const model = sanitizeModel(opts.providerOpts?.model || process.env.ANTHROPIC_MODEL || 'deepseek-v4-flash');
 
   // Token budget: same as compile — scale to expected complexity
   const estimatedSections = (input.match(/(?:hero|features|specs|faq|contact|pricing|gallery|cta|testimonials|footer|trust_badges|slide|title|custom|summary|analysis|kpi|recommendations|description|email|social|seo|brand|story)/gi) || []).length;

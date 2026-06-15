@@ -18,6 +18,12 @@ export interface ProviderResult {
  * Anthropic (Claude) provider adapter.
  * Uses the @anthropic-ai/sdk. Supports custom baseURL for compatible APIs.
  */
+/** Strip ANSI escape artifacts and context-window tags from model names. */
+export function sanitizeModel(name: string): string {
+  // Remove [Nm] or [Nk] suffixes (e.g. "deepseek-v4-pro[1m]" → "deepseek-v4-pro")
+  return name.replace(/\[\d+[mk]\]$/i, '').trim();
+}
+
 export async function callAnthropic(
   systemPrompt: string,
   userMessage: string,
@@ -42,8 +48,12 @@ export async function callAnthropic(
     ...(baseURL ? { baseURL } : {}),
   });
 
+  const model = sanitizeModel(
+    opts.model || process.env.ANTHROPIC_MODEL || 'deepseek-v4-flash'
+  );
+
   const resp = await client.messages.create({
-    model: opts.model || process.env.ANTHROPIC_MODEL || 'deepseek-v4-flash',
+    model,
     max_tokens: opts.maxTokens || 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
