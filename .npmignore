@@ -1,11 +1,5 @@
-src/__tests__/
+.intent-compiler/
 test-output/
-examples/renderers/
-examples/drwarm.ts
-DEVLOG.md
-ROADMAP.md
-MCP_SETUP.md
-CONTRIBUTING.md
-.github/
-.mcp.json
-*.png
+REPORT.md
+*.log
+.env
