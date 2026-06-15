@@ -380,7 +380,7 @@ export async function* compileStream(
   });
 
   const systemPrompt = buildSystemPrompt(opts.lockFields, opts.existingIR);
-  const model = opts.providerOpts?.model || process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
+  const model = opts.providerOpts?.model || process.env.ANTHROPIC_MODEL || 'deepseek-v4-flash';
 
   // Token budget: same as compile — scale to expected complexity
   const estimatedSections = (input.match(/(?:hero|features|specs|faq|contact|pricing|gallery|cta|testimonials|footer|trust_badges|slide|title|custom|summary|analysis|kpi|recommendations|description|email|social|seo|brand|story)/gi) || []).length;

@@ -43,7 +43,7 @@ export async function callAnthropic(
   });
 
   const resp = await client.messages.create({
-    model: opts.model || process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
+    model: opts.model || process.env.ANTHROPIC_MODEL || 'deepseek-v4-flash',
     max_tokens: opts.maxTokens || 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
